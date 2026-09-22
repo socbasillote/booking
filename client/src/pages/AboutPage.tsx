@@ -25,7 +25,7 @@ function AboutPage() {
           <div className="mt-20 grid gap-16 lg:grid-cols-[1fr_0.8fr]">
             <div className="text-2xl font-bold leading-relaxed md:text-3xl">
               We believe a great pickleball club should feel like more than a
-              place where you rent a court.
+              place where you rent a court. TEST
             </div>
 
             <div className="space-y-6 text-lg leading-8 text-emerald-950/70">
