@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import HeaderComponent from "./HomeComponent/HeaderComponent";
 import FooterComponent from "./HomeComponent/FooterComponent";

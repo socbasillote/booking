@@ -20,11 +20,8 @@ import {
   BadgeCheck,
   ParkingCircle,
   Utensils,
-  UserPlus,
   UsersRound,
   Users,
-  Apple,
-  GlassWater,
   UserRoundGroup,
 } from "lucide-react";
 

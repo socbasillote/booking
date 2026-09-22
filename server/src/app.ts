@@ -11,6 +11,7 @@ import { publicRouter } from "./routes/public.routes.js";
 import { serviceRouter } from "./routes/service.routes.js";
 import { teamRouter } from "./routes/team.routes.js";
 import { handlePayMongoWebhook } from "./controllers/public.controller.js";
+import { env } from "./config/env.js";
 
 export const app = express();
 
@@ -18,7 +19,7 @@ app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL ?? "http://localhost:5173",
+    origin: env.clientUrl,
     credentials: true,
   }),
 );

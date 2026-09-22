@@ -4,8 +4,9 @@ import { env } from "./config/env.js";
 
 async function startServer() {
   await connectDatabase();
-  app.listen(env.port, () => {
-    console.log(`Sidebooking API running on http://localhost:${env.port}`);
+
+  app.listen(env.port, "0.0.0.0", () => {
+    console.log(`Sidebooking API running on port ${env.port}`);
   });
 }
 
