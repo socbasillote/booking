@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #0f172a;
+  background: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+body {
+  min-width: 320px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+.hero-button,
+.hero-button a,
+button a,
+[role="button"] {
+  cursor: pointer;
+}
+
+/* =========================================================
+   PICKLEBALL COURT
+   ========================================================= */
+
+.court-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.court {
+  position: absolute;
+  top: 2%;
+  right: 2%;
+  bottom: 2%;
+  left: 2%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* =========================================================
+   KITCHEN LINES
+   ========================================================= */
+
+.kitchen-left {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 34.09%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.kitchen-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 65.91%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================================
+   SERVICE LINES
+   ========================================================= */
+
+.service-left {
+  position: absolute;
+  left: 0;
+  width: 34.09%;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%);
+}
+
+.service-right {
+  position: absolute;
+  right: 0;
+  width: 34.09%;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%);
+}
+
+/* =========================================================
+   CENTER / NET LINE
+   ========================================================= */
+
+.center-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(-50%);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+.court-time-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(23, 63, 45, 0.25) transparent;
+}
+
+.court-time-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.court-time-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.court-time-scroll::-webkit-scrollbar-thumb {
+  background: rgba(23, 63, 45, 0.2);
+  border-radius: 999px;
+}
+
+.court-time-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(23, 63, 45, 0.4);
+}
+
+/* Keep the weekly court matrix aligned while the time axis remains visible. */
+.min-w-\[760px\] {
+  min-width: 980px;
+}
+
+.min-w-\[760px\] > .grid:first-child {
+  grid-template-rows: auto auto;
+}
+
+.min-w-\[760px\] > .grid:last-child > .contents > div:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+}
