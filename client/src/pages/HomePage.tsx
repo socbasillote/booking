@@ -237,11 +237,11 @@ export function HomePage() {
     return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
-  const navLinks = [
+  /*   const navLinks = [
     { nav: "Club", link: "/club" },
     { nav: "Events", link: "/event" },
     { nav: "About Us", link: "/about" },
-  ];
+  ]; */
 
   const whyBook = [
     {
@@ -295,7 +295,7 @@ export function HomePage() {
     },
   ];
 
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
   const galleryImages = [
     {
@@ -324,7 +324,7 @@ export function HomePage() {
     },
   ];
 
-  const openGallery = (index) => {
+  const openGallery = (index: number) => {
     setSelectedImage(index);
   };
 
@@ -333,21 +333,29 @@ export function HomePage() {
   };
 
   const nextImage = () => {
-    setSelectedImage((current) =>
-      current === galleryImages.length - 1 ? 0 : current + 1,
-    );
+    setSelectedImage((current) => {
+      if (current === null) {
+        return 0;
+      }
+
+      return current === galleryImages.length - 1 ? 0 : current + 1;
+    });
   };
 
   const previousImage = () => {
-    setSelectedImage((current) =>
-      current === 0 ? galleryImages.length - 1 : current - 1,
-    );
+    setSelectedImage((current) => {
+      if (current === null) {
+        return galleryImages.length - 1;
+      }
+
+      return current === 0 ? galleryImages.length - 1 : current - 1;
+    });
   };
 
   useEffect(() => {
     if (selectedImage === null) return;
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeGallery();
       if (event.key === "ArrowRight") nextImage();
       if (event.key === "ArrowLeft") previousImage();
@@ -1135,27 +1143,27 @@ export function HomePage() {
                     <div className="mt-9 divide-y divide-white/10 border-y border-white/10">
                       {[
                         {
-                          number: <UserRoundGroup />,
+                          icon: <UserRoundGroup />,
                           title: "Meet New Players",
                           text: "Find people who love the game as much as you do.",
                         },
                         {
-                          number: <UsersRound />,
+                          icon: <UsersRound />,
                           title: "Every Skill Level",
                           text: "Beginner, intermediate, or experienced — everyone belongs.",
                         },
                         {
-                          number: <Users />,
+                          icon: <Users />,
                           title: "Build Your Crew",
                           text: "Turn casual games into a community you look forward to.",
                         },
                       ].map((item) => (
                         <div
-                          key={item.number}
+                          key={item.title}
                           className="flex gap-5 py-5 first:pt-6 last:pb-6"
                         >
                           <span className="pt-1 text-[10px] font-black tracking-widest text-lime-300">
-                            {item.number}
+                            {item.icon}
                           </span>
 
                           <div>
