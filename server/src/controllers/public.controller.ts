@@ -20,7 +20,7 @@ function minutesFromTime(value: string) {
 const bookingSchema = z.object({
   customer: z.string().trim().min(2),
   email: z.string().email(),
-  phone: z.string().trim().min(7),
+  phone: z.string().trim(),
   service: z.string().trim().min(2),
   staff: z.string().trim().min(2).default("Maria"),
   court: z.string().trim().min(1).default("Court 1").optional(),
