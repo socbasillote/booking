@@ -12,13 +12,28 @@ export function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(""); setBusy(true);
+    setError("");
+    setBusy(true);
     const form = new FormData(event.currentTarget);
     try {
-      const data = await apiRequest<{ user: Parameters<typeof login>[0]; token: string }>("/auth/login", { method: "POST", body: JSON.stringify({ email: form.get("email"), password: form.get("password") }) });
-      saveSession(data); dispatch(login(data.user)); navigate("/dashboard");
-    } catch (err) { setError(err instanceof Error ? err.message : "Unable to sign in"); }
-    finally { setBusy(false); }
+      const data = await apiRequest<{
+        user: Parameters<typeof login>[0];
+        token: string;
+      }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
+      });
+      saveSession(data);
+      dispatch(login(data.user));
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign in");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -42,7 +57,8 @@ export function LoginPage() {
               Email
             </label>
             <input
-              name="email" defaultValue="alicia@sidebooking.com"
+              name="email"
+              defaultValue="alicia@sidebooking.com"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="email"
             />
@@ -53,7 +69,8 @@ export function LoginPage() {
               Password
             </label>
             <input
-              name="password" defaultValue="password123"
+              name="password"
+              defaultValue="password123"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="password"
             />
@@ -67,7 +84,19 @@ export function LoginPage() {
           </button>
         </form>
 
-        {error && <p className="mt-3 text-center text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+        )}
+        <div className="mt-5 text-center text-sm text-slate-500">
+          Don't have an account?{" "}
+          <button
+            type="button"
+            onClick={() => navigate("/register")}
+            className="font-medium text-slate-900 hover:underline"
+          >
+            Create an account
+          </button>
+        </div>
 
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
           Demo account: alicia@sidebooking.com
