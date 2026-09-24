@@ -1,6 +1,6 @@
 const API_URL = (
   import.meta.env.VITE_API_URL ??
-  (import.meta.env.PROD ? "https://bookingserver-psi.vercel.app/api" : "/api")
+  (import.meta.env.PROD ? "https://bookingserver-psi.vercel.app" : "/api")
 ).replace(/\/$/, "");
 
 export type ApiResponse<T> = {
