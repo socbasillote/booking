@@ -43,10 +43,11 @@ export const env = {
     process.env.JWT_REFRESH_SECRET ??
     (isProduction ? required("JWT_REFRESH_SECRET") : "dev-refresh-secret"),
 
-  clientUrl:
+  clientUrl: (
     process.env.CLIENT_URL ??
     process.env.FRONTEND_URL ??
-    "http://localhost:5173",
+    "http://localhost:5173"
+  ).replace(/\/$/, ""),
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),

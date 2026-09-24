@@ -17,12 +17,15 @@ export const app = express();
 
 app.set("trust proxy", 1);
 
+const corsOptions = {
+  origin: env.clientUrl,
+  credentials: true,
+};
+
 app.use(
-  cors({
-    origin: env.clientUrl,
-    credentials: true,
-  }),
+  cors(corsOptions),
 );
+app.options(/.*/, cors(corsOptions));
 app.use(helmet());
 app.post(
   "/api/payments/paymongo/webhook",
