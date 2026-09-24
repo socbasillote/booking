@@ -2,8 +2,14 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const clientUrl = process.env.CLIENT_URL ?? process.env.FRONTEND_URL;
+
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
+
+if (isProduction && !clientUrl) {
+  throw new Error("Missing required environment variable: CLIENT_URL");
+}
 
 function required(name: string): string {
   const value = process.env[name];
@@ -43,11 +49,7 @@ export const env = {
     process.env.JWT_REFRESH_SECRET ??
     (isProduction ? required("JWT_REFRESH_SECRET") : "dev-refresh-secret"),
 
-  clientUrl: (
-    process.env.CLIENT_URL ??
-    process.env.FRONTEND_URL ??
-    "http://localhost:5173"
-  ).replace(/\/$/, ""),
+  clientUrl: (clientUrl ?? "http://localhost:5173").replace(/\/$/, ""),
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
