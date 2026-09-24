@@ -6,6 +6,8 @@ export type User = {
   name: string;
   email: string;
   role: "owner" | "admin" | "staff";
+  businessSlug?: string;
+  onboardingComplete?: boolean;
 };
 
 type AuthState = {
@@ -28,6 +30,9 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
     },
+    updateUser: (state, action: PayloadAction<Partial<User>>) => {
+      state.user = state.user ? { ...state.user, ...action.payload } : null;
+    },
     logout: (state) => {
       clearSession();
       state.user = null;
@@ -39,5 +44,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { login, logout, setLoading } = authSlice.actions;
+export const { login, logout, setLoading, updateUser } = authSlice.actions;
 export default authSlice.reducer;

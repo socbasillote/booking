@@ -1,15 +1,39 @@
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/api";
+import { updateUser } from "../features/auth/authSlice";
 
 export function BusinessSetupPage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(""); setBusy(true);
     const form = new FormData(event.currentTarget);
-    try { await apiRequest("/business", { method: "PUT", body: JSON.stringify({ name: form.get("name"), slug: form.get("slug"), description: form.get("description") }) }); navigate("/dashboard"); }
+    try {
+      const response = await apiRequest<{ business: { slug: string } }>(
+        "/business",
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            name: String(form.get("name") ?? "").trim(),
+            slug: String(form.get("slug") ?? "").trim(),
+            description: form.get("description"),
+            timezone: form.get("timezone"),
+            currency: form.get("currency"),
+          }),
+        },
+      );
+      dispatch(
+        updateUser({
+          businessSlug: response.business.slug,
+          onboardingComplete: true,
+        }),
+      );
+      navigate("/dashboard");
+    }
     catch (err) { setError(err instanceof Error ? err.message : "Unable to save business"); } finally { setBusy(false); }
   }
   return (
@@ -30,7 +54,7 @@ export function BusinessSetupPage() {
               Business name
             </label>
             <input
-              name="name" defaultValue="Maria Studio" required
+              name="name" required
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
           </div>
@@ -39,7 +63,7 @@ export function BusinessSetupPage() {
               Business slug
             </label>
             <input
-              name="slug" defaultValue="maria-studio" required
+              name="slug" required pattern="[a-z0-9-]+"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
           </div>
@@ -48,7 +72,7 @@ export function BusinessSetupPage() {
               Business description
             </label>
             <textarea
-              name="description" defaultValue="Modern beauty and wellness services for busy professionals."
+              name="description" required minLength={1}
               rows={4}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
@@ -58,6 +82,8 @@ export function BusinessSetupPage() {
               Timezone
             </label>
             <select
+              name="timezone"
+              required
               defaultValue="Asia/Manila"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             >
@@ -71,6 +97,8 @@ export function BusinessSetupPage() {
               Currency
             </label>
             <select
+              name="currency"
+              required
               defaultValue="PHP"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             >
@@ -82,9 +110,6 @@ export function BusinessSetupPage() {
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-3">
-            <button type="button" onClick={() => navigate("/dashboard")} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700">
-            Skip
-          </button>
           <button type="submit" disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">
             {busy ? "Saving…" : "Continue"}
           </button>

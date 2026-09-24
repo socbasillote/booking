@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { apiRequest } from "../lib/api";
+import { updateUser } from "../features/auth/authSlice";
 
 type BusinessSettings = {
   business: {
@@ -29,6 +31,9 @@ export function SettingsPage() {
   const [business, setBusiness] = useState<BusinessSettings["business"] | null>(
     null,
   );
+  const dispatch = useDispatch();
+  const [businessName, setBusinessName] = useState("");
+  const [businessSlug, setBusinessSlug] = useState("");
   const [openHour, setOpenHour] = useState("08:00");
   const [closeHour, setCloseHour] = useState("20:00");
   const [slotsPerHour, setSlotsPerHour] = useState(2);
@@ -70,6 +75,8 @@ export function SettingsPage() {
         const saved = data.business;
         if (saved) {
           setBusiness(saved);
+          setBusinessName(saved.name);
+          setBusinessSlug(saved.slug);
           const nextOpenHour = saved.openHour ?? "08:00";
           const nextCloseHour = saved.closeHour ?? "20:00";
           setOpenHour(nextOpenHour);
@@ -108,8 +115,8 @@ export function SettingsPage() {
       const normalizedCloseHour = isOpen24Hours ? "23:30" : closeHour;
 
       const payload = {
-        name: business?.name ?? "Maria Studio",
-        slug: business?.slug ?? "maria-studio",
+        name: businessName.trim(),
+        slug: businessSlug.trim(),
         description: business?.description ?? "",
         openHour: normalizedOpenHour,
         closeHour: normalizedCloseHour,
@@ -137,7 +144,15 @@ export function SettingsPage() {
 
       if (response?.business) {
         setBusiness(response.business);
+        setBusinessName(response.business.name);
+        setBusinessSlug(response.business.slug);
         setDisabledCourts(response.business.disabledCourts ?? []);
+        dispatch(
+          updateUser({
+            businessSlug: response.business.slug,
+            onboardingComplete: true,
+          }),
+        );
       }
 
       setStatus("Business hours updated");
@@ -163,8 +178,8 @@ export function SettingsPage() {
       }>("/business/", {
         method: "PUT",
         body: JSON.stringify({
-          name: business?.name ?? "Maria Studio",
-          slug: business?.slug ?? "maria-studio",
+          name: businessName.trim(),
+          slug: businessSlug.trim(),
           description: business?.description ?? "",
           settings: {
             payments: {
@@ -174,7 +189,17 @@ export function SettingsPage() {
         }),
       });
 
-      setBusiness(response.business);
+      if (response.business) {
+        setBusiness(response.business);
+        setBusinessName(response.business.name);
+        setBusinessSlug(response.business.slug);
+        dispatch(
+          updateUser({
+            businessSlug: response.business.slug,
+            onboardingComplete: true,
+          }),
+        );
+      }
       setPaymongoSecretKey("");
       setPaymentStatus("PayMongo is connected and ready for online bookings.");
     } catch (err) {
@@ -248,16 +273,29 @@ export function SettingsPage() {
             Business Profile
           </h2>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center justify-between">
-              <span>Studio name</span>
-              <span className="font-medium text-slate-900">
-                {business?.name ?? "Maria Studio"}
-              </span>
-            </div>
+            <label className="block">
+              <span className="mb-1 block">Studio name</span>
+              <input
+                value={businessName}
+                onChange={(event) => setBusinessName(event.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block">Booking slug</span>
+              <input
+                value={businessSlug}
+                onChange={(event) => setBusinessSlug(event.target.value)}
+                required
+                pattern="[a-z0-9-]+"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900"
+              />
+              </label>
             <div className="flex items-center justify-between">
               <span>Booking page</span>
               <span className="font-medium text-slate-900">
-                /book/{business?.slug ?? "maria-studio"}
+                /book/{businessSlug}
               </span>
             </div>
             <div className="flex items-center justify-between">

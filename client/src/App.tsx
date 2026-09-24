@@ -1,10 +1,12 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Provider, useSelector } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { store, type RootState } from "./store/store";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { apiRequest } from "./lib/api";
+import { updateUser, type User } from "./features/auth/authSlice";
 import "./App.css";
 
 const DashboardPage = lazy(() =>
@@ -72,10 +74,24 @@ function ProtectedApp() {
   const { isAuthenticated, user } = useSelector(
     (state: RootState) => state.auth,
   );
+  const dispatch = useDispatch();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(
+    user?.onboardingComplete === undefined,
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.onboardingComplete !== undefined) return;
+    void apiRequest<{ user: User }>("/auth/me")
+      .then(({ user: currentUser }) => dispatch(updateUser(currentUser)))
+      .finally(() => setCheckingOnboarding(false));
+  }, [dispatch, isAuthenticated, user?.onboardingComplete]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  if (checkingOnboarding) return <RouteFallback />;
+  if (!user?.onboardingComplete) return <Navigate to="/onboarding" replace />;
 
   return (
     <Layout>

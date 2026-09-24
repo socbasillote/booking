@@ -76,7 +76,8 @@ export function DashboardPage() {
   const stats = useMemo(() => {
     const pending = bookings.filter((row) => row.status === "Pending");
     const todayRevenue = todayBookings.reduce(
-      (sum, row) => sum + (row.payment === "Paid" ? Number(row.amount ?? 0) : 0),
+      (sum, row) =>
+        sum + (row.payment === "Paid" ? Number(row.amount ?? 0) : 0),
       0,
     );
 
@@ -145,7 +146,7 @@ export function DashboardPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map(({ label, value, change, icon: Icon }) => (
+        {stats.map(({ label, value, change, icon: Icon }, index) => (
           <div key={label} className="stat-card">
             <div className="flex items-start justify-between">
               <div>
@@ -154,9 +155,11 @@ export function DashboardPage() {
                   {value}
                 </h2>
               </div>
-              <div className="rounded-lg bg-slate-900 p-2 text-white">
-                <Icon size={18} />
-              </div>
+              {index !== 3 && (
+                <div className="rounded-lg bg-slate-900 p-2 text-white">
+                  <Icon size={18} />
+                </div>
+              )}
             </div>
             <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
               <ArrowUpRight size={12} />

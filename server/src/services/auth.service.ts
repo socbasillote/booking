@@ -1,7 +1,25 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
+import { Business } from "../models/Business.js";
 import { env } from "../config/env.js";
+
+async function userPayload(user: InstanceType<typeof User>) {
+  const business = user.businessIds[0]
+    ? await Business.findById(user.businessIds[0]).select("name slug")
+    : null;
+
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    businessSlug: business?.slug,
+    onboardingComplete: Boolean(
+      business?.name?.trim() && business?.slug?.trim(),
+    ),
+  };
+}
 
 export async function registerUser(input: {
   name: string;
@@ -32,12 +50,7 @@ export async function registerUser(input: {
   );
 
   return {
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    user: await userPayload(user),
     token,
   };
 }
@@ -66,12 +79,7 @@ export async function loginUser(input: { email: string; password: string }) {
   );
 
   return {
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    user: await userPayload(user),
     token,
   };
 }

@@ -111,7 +111,7 @@ function getDateOptions(daysAhead = 45) {
 }
 
 export function PublicBookingPage() {
-  const { slug = "maria-studio" } = useParams();
+  const { slug = "" } = useParams();
   const [data, setData] = useState<BusinessData | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedCourt, setSelectedCourt] = useState<string>("Court 1");

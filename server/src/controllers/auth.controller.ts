@@ -4,6 +4,7 @@ import { loginSchema, registerSchema } from "../validators/auth.validators.js";
 import { loginUser, registerUser } from "../services/auth.service.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { User } from "../models/User.js";
+import { Business } from "../models/Business.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
 export async function registerController(
@@ -63,7 +64,19 @@ export async function loginController(
 export async function meController(req: AuthRequest, res: Response) {
   const user = await User.findById(req.userId);
   if (!user) return sendError(res, "User not found", 404);
+  const business = user.businessIds[0]
+    ? await Business.findById(user.businessIds[0]).select("name slug")
+    : null;
   return sendSuccess(res, {
-    user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role },
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      businessSlug: business?.slug,
+      onboardingComplete: Boolean(
+        business?.name?.trim() && business?.slug?.trim(),
+      ),
+    },
   });
 }
