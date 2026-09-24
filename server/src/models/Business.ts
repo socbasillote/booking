@@ -6,6 +6,7 @@ export interface IBusiness extends Document {
   currency: string;
   ownerId: Types.ObjectId;
   description?: string;
+  timezone?: string;
   openHour: string;
   closeHour: string;
   slotsPerHour?: number;
@@ -349,6 +350,7 @@ const businessSchema = new Schema<IBusiness>(
     },
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     description: { type: String, default: "" },
+    timezone: { type: String, default: "Asia/Manila", trim: true },
     openHour: { type: String, default: "08:00" },
     closeHour: { type: String, default: "20:00" },
     slotsPerHour: { type: Number, default: 2, min: 1, max: 12 },

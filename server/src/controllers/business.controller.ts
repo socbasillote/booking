@@ -182,6 +182,7 @@ const businessSchema = z.object({
     .regex(/^[A-Za-z]{3}$/)
     .default("PHP"),
   description: z.string().trim().max(500).optional().default(""),
+  timezone: z.string().trim().min(1).default("Asia/Manila"),
   openHour: z
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)

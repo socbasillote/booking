@@ -18,7 +18,21 @@ export const app = express();
 app.set("trust proxy", 1);
 
 const corsOptions = {
-  origin: env.clientUrl,
+  origin: (
+    origin: string | undefined,
+    callback: (error: Error | null, allow?: boolean) => void,
+  ) => {
+    const isVercelOrigin =
+      env.nodeEnv === "production" &&
+      /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin ?? "");
+
+    if (!origin || env.clientUrls.includes(origin) || isVercelOrigin) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Origin is not allowed by CORS"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

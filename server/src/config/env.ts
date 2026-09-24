@@ -3,6 +3,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const clientUrl = process.env.CLIENT_URL ?? process.env.FRONTEND_URL;
+const clientUrls = [
+  ...(process.env.CLIENT_URLS?.split(",") ?? []),
+  clientUrl ?? "",
+]
+  .map((url) => url.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
@@ -50,6 +56,7 @@ export const env = {
     (isProduction ? required("JWT_REFRESH_SECRET") : "dev-refresh-secret"),
 
   clientUrl: (clientUrl ?? "http://localhost:5173").replace(/\/$/, ""),
+  clientUrls,
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
