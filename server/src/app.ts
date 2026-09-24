@@ -20,10 +20,13 @@ app.set("trust proxy", 1);
 const corsOptions = {
   origin: env.clientUrl,
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+
 app.use(helmet());
 app.post(
   "/api/payments/paymongo/webhook",
