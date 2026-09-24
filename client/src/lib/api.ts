@@ -15,7 +15,8 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = localStorage.getItem("sidebooking_token");
-  const response = await fetch(`${API_URL}${path}`, {
+  const normalizedPath = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  const response = await fetch(`${API_URL}${normalizedPath}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
