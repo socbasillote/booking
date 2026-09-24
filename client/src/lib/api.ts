@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.PROD ? "https://bookingserver-psi.vercel.app/api" : "/api");
 
 export type ApiResponse<T> = {
   success: boolean;
