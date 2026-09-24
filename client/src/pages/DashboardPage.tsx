@@ -48,7 +48,7 @@ export function DashboardPage() {
     async function loadDashboard() {
       try {
         const data = await apiRequest<{ bookings: BookingResponse[] }>(
-          "/bookings/",
+          "/bookings",
         );
         setBookings(
           (data.bookings ?? []).map((row) => ({
@@ -64,9 +64,7 @@ export function DashboardPage() {
     }
     async function loadServices() {
       try {
-        const data = await apiRequest<{
-          currency?: string;
-        }>("/services/");
+        const data = await apiRequest<{ currency?: string }>("/services");
         setCurrency(data.currency ?? "PHP");
       } catch (err) {
         setError(
@@ -88,7 +86,7 @@ export function DashboardPage() {
     [bookings, todayKey],
   );
 
-  function currencyChange(currency) {
+  function currencyChange(currency: string) {
     switch (currency) {
       case "USD":
         return "$";

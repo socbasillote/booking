@@ -73,7 +73,7 @@ export function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await apiRequest<BusinessSettings>("/business/");
+        const data = await apiRequest<BusinessSettings>("/business");
         const saved = data.business;
         if (saved) {
           setBusiness(saved);
@@ -141,7 +141,7 @@ export function SettingsPage() {
 
       const response = await apiRequest<{
         business: BusinessSettings["business"];
-      }>("/business/", {
+      }>("/business", {
         method: "PUT",
         body: JSON.stringify(payload),
       });
@@ -180,7 +180,7 @@ export function SettingsPage() {
     try {
       const response = await apiRequest<{
         business: BusinessSettings["business"];
-      }>("/business/", {
+      }>("/business", {
         method: "PUT",
         body: JSON.stringify({
           name: businessName.trim(),

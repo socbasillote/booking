@@ -17,7 +17,7 @@ export function TeamPage() {
   useEffect(() => {
     async function loadTeam() {
       try {
-        const data = await apiRequest<{ users: TeamMember[] }>("/team/");
+        const data = await apiRequest<{ users: TeamMember[] }>("/team");
         setTeam(data.users ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load team");
@@ -35,7 +35,7 @@ export function TeamPage() {
     const form = new FormData(event.currentTarget);
 
     try {
-      await apiRequest<{ user: TeamMember }>("/team/", {
+      await apiRequest<{ user: TeamMember }>("/team", {
         method: "POST",
         body: JSON.stringify({
           name: form.get("name"),
@@ -47,7 +47,7 @@ export function TeamPage() {
       setShowForm(false);
       event.currentTarget.reset();
 
-      const data = await apiRequest<{ users: TeamMember[] }>("/team/");
+      const data = await apiRequest<{ users: TeamMember[] }>("/team");
       setTeam(data.users ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to add staff");

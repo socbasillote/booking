@@ -57,8 +57,8 @@ export function CustomersPage() {
     async function loadCustomers() {
       try {
         const [customerData, bookingData] = await Promise.all([
-          apiRequest<{ customers: Customer[] }>("/customers/"),
-          apiRequest<{ bookings: Booking[] }>("/bookings/"),
+          apiRequest<{ customers: Customer[] }>("/customers"),
+          apiRequest<{ bookings: Booking[] }>("/bookings"),
         ]);
         setCustomers(customerData.customers ?? []);
         setBookings(bookingData.bookings ?? []);

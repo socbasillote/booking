@@ -72,11 +72,11 @@ export type BookingPayload = {
 };
 
 export async function fetchServices() {
-  return apiRequest<ServicePayload>("/services/");
+  return apiRequest<ServicePayload>("/services");
 }
 
 export async function fetchBookings() {
-  return apiRequest<BookingPayload>("/bookings/");
+  return apiRequest<BookingPayload>("/bookings");
 }
 
 export async function saveSession(data: { token: string; user: unknown }) {

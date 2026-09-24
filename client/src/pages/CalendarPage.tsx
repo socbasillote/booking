@@ -123,8 +123,8 @@ export function CalendarPage() {
     async function load() {
       try {
         const [bookingData, settingsData] = await Promise.all([
-          apiRequest<{ bookings: Booking[] }>("/bookings/"),
-          apiRequest<Settings>("/business/"),
+          apiRequest<{ bookings: Booking[] }>("/bookings"),
+          apiRequest<Settings>("/business"),
         ]);
         setBookings((bookingData.bookings ?? []).map(normalize));
         const business = settingsData.business;
@@ -174,12 +174,12 @@ export function CalendarPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await apiRequest<{ booking: Booking }>("/bookings/", {
+      const result = await apiRequest<{ booking: Booking }>("/bookings", {
         method: "POST",
         body: JSON.stringify(draft),
       });
       addBookingNotification(result.booking ?? draft);
-      const data = await apiRequest<{ bookings: Booking[] }>("/bookings/");
+      const data = await apiRequest<{ bookings: Booking[] }>("/bookings");
       setBookings((data.bookings ?? []).map(normalize));
       setShowForm(false);
     } catch (err) {

@@ -27,7 +27,7 @@ export function ServicesPage() {
       const data = await apiRequest<{
         services: Service[];
         currency?: string;
-      }>("/services/");
+      }>("/services");
       setServices(data.services ?? []);
       setCurrency(data.currency ?? "PHP");
     } catch (err) {
@@ -57,7 +57,7 @@ export function ServicesPage() {
         assignedStaffIds: [],
       };
       await apiRequest<{ service: Service }>(
-        editingService ? `/services/${editingService.id}` : "/services/",
+        editingService ? `/services/${editingService.id}` : "/services",
         {
           method: editingService ? "PUT" : "POST",
           body: JSON.stringify(payload),
@@ -100,7 +100,7 @@ export function ServicesPage() {
     setOpen(true);
   }
 
-  function currencyChange(currency) {
+  function currencyChange(currency: string) {
     switch (currency) {
       case "USD":
         return "$";

@@ -46,9 +46,9 @@ export function BookingsPage() {
     try {
       const bookingData = await apiRequest<{
         bookings: Array<Booking & { _id?: string }>;
-      }>("/bookings/");
+      }>("/bookings");
       const serviceData = await apiRequest<{ services: Service[] }>(
-        "/services/",
+        "/services",
       );
       const mapped = (bookingData.bookings ?? []).map((row) => ({
         ...row,
@@ -71,7 +71,7 @@ export function BookingsPage() {
     setBusy(true);
     const form = new FormData(event.currentTarget);
     try {
-      await apiRequest<{ booking: Booking }>("/bookings/", {
+      await apiRequest<{ booking: Booking }>("/bookings", {
         method: "POST",
         body: JSON.stringify({
           customer: String(form.get("customer")),
