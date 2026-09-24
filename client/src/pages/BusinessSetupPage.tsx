@@ -10,7 +10,9 @@ export function BusinessSetupPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(""); setBusy(true);
+    event.preventDefault();
+    setError("");
+    setBusy(true);
     const form = new FormData(event.currentTarget);
     try {
       const response = await apiRequest<{ business: { slug: string } }>(
@@ -33,8 +35,11 @@ export function BusinessSetupPage() {
         }),
       );
       navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save business");
+    } finally {
+      setBusy(false);
     }
-    catch (err) { setError(err instanceof Error ? err.message : "Unable to save business"); } finally { setBusy(false); }
   }
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -54,7 +59,8 @@ export function BusinessSetupPage() {
               Business name
             </label>
             <input
-              name="name" required
+              name="name"
+              required
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
           </div>
@@ -63,7 +69,9 @@ export function BusinessSetupPage() {
               Business slug
             </label>
             <input
-              name="slug" required pattern="[a-z0-9-]+"
+              name="slug"
+              required
+              pattern="[a-z0-9-]+"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
           </div>
@@ -72,7 +80,9 @@ export function BusinessSetupPage() {
               Business description
             </label>
             <textarea
-              name="description" required minLength={1}
+              name="description"
+              required
+              minLength={1}
               rows={4}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
             />
@@ -110,11 +120,17 @@ export function BusinessSetupPage() {
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-3">
-          <button type="submit" disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          >
             {busy ? "Saving…" : "Continue"}
           </button>
         </div>
-        {error && <p className="mt-3 text-right text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="mt-3 text-right text-sm text-red-600">{error}</p>
+        )}
       </form>
     </div>
   );

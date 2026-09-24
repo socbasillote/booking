@@ -224,7 +224,12 @@ export function Layout({ children }: { children: ReactNode }) {
             .map(({ label, to, icon: Icon }) => (
               <NavLink
                 key={label}
-                to={to ?? (label === "Booking Page" && user?.businessSlug ? `/book/${user.businessSlug}` : "/settings")}
+                to={
+                  to ??
+                  (label === "Booking Page" && user?.businessSlug
+                    ? `/book/${user.businessSlug}`
+                    : "/settings")
+                }
                 title={isCollapsed ? label : undefined}
                 className={({ isActive }) =>
                   `sidebar-item flex items-center rounded-xl py-2 ${

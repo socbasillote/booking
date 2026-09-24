@@ -291,7 +291,7 @@ export function SettingsPage() {
                 pattern="[a-z0-9-]+"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900"
               />
-              </label>
+            </label>
             <div className="flex items-center justify-between">
               <span>Booking page</span>
               <span className="font-medium text-slate-900">
