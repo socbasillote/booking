@@ -22,6 +22,7 @@ type BookingEntry = {
 type BusinessData = {
   business: {
     name: string;
+    currency?: string;
     description?: string;
     openHour?: string;
     closeHour?: string;
@@ -1050,7 +1051,7 @@ export function PublicBookingPage() {
                   Booking total
                 </span>
                 <span className="text-lg font-black text-emerald-950">
-                  PHP{" "}
+                  {data?.business.currency ?? "PHP"}{" "}
                   {(
                     (data?.services[0]?.price ?? 0) * selectedSlots.length
                   ).toLocaleString()}
@@ -1101,7 +1102,7 @@ export function PublicBookingPage() {
                   Total amount
                 </p>
                 <p className="mt-1 text-2xl font-black text-emerald-950">
-                  PHP{" "}
+                  {data?.business.currency ?? "PHP"}{" "}
                   {(
                     (data?.services[0]?.price ?? 0) * selectedSlots.length
                   ).toLocaleString()}

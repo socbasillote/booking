@@ -8,6 +8,7 @@ type BusinessSettings = {
     id?: string;
     name: string;
     slug: string;
+    currency?: string;
     description?: string;
     openHour?: string;
     closeHour?: string;
@@ -34,6 +35,7 @@ export function SettingsPage() {
   const dispatch = useDispatch();
   const [businessName, setBusinessName] = useState("");
   const [businessSlug, setBusinessSlug] = useState("");
+  const [currency, setCurrency] = useState("PHP");
   const [openHour, setOpenHour] = useState("08:00");
   const [closeHour, setCloseHour] = useState("20:00");
   const [slotsPerHour, setSlotsPerHour] = useState(2);
@@ -77,6 +79,7 @@ export function SettingsPage() {
           setBusiness(saved);
           setBusinessName(saved.name);
           setBusinessSlug(saved.slug);
+          setCurrency(saved.currency ?? "PHP");
           const nextOpenHour = saved.openHour ?? "08:00";
           const nextCloseHour = saved.closeHour ?? "20:00";
           setOpenHour(nextOpenHour);
@@ -117,6 +120,7 @@ export function SettingsPage() {
       const payload = {
         name: businessName.trim(),
         slug: businessSlug.trim(),
+        currency,
         description: business?.description ?? "",
         openHour: normalizedOpenHour,
         closeHour: normalizedCloseHour,
@@ -146,6 +150,7 @@ export function SettingsPage() {
         setBusiness(response.business);
         setBusinessName(response.business.name);
         setBusinessSlug(response.business.slug);
+        setCurrency(response.business.currency ?? "PHP");
         setDisabledCourts(response.business.disabledCourts ?? []);
         dispatch(
           updateUser({
@@ -180,6 +185,7 @@ export function SettingsPage() {
         body: JSON.stringify({
           name: businessName.trim(),
           slug: businessSlug.trim(),
+          currency,
           description: business?.description ?? "",
           settings: {
             payments: {
@@ -193,6 +199,7 @@ export function SettingsPage() {
         setBusiness(response.business);
         setBusinessName(response.business.name);
         setBusinessSlug(response.business.slug);
+        setCurrency(response.business.currency ?? "PHP");
         dispatch(
           updateUser({
             businessSlug: response.business.slug,
@@ -300,7 +307,17 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <span>Currency</span>
-              <span className="font-medium text-slate-900">PHP</span>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value)}
+                className="rounded-lg border border-slate-200 px-2 py-1 font-medium text-slate-900"
+              >
+                <option value="PHP">PHP</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="JPY">JPY</option>
+              </select>
             </div>
           </div>
         </section>

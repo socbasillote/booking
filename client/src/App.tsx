@@ -75,16 +75,19 @@ function ProtectedApp() {
     (state: RootState) => state.auth,
   );
   const dispatch = useDispatch();
-  const [checkingOnboarding, setCheckingOnboarding] = useState(
-    user?.onboardingComplete === undefined,
-  );
+  const [checkingOnboarding, setCheckingOnboarding] = useState(isAuthenticated);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.onboardingComplete !== undefined) return;
+    if (!isAuthenticated) {
+      setCheckingOnboarding(false);
+      return;
+    }
+
+    setCheckingOnboarding(true);
     void apiRequest<{ user: User }>("/auth/me")
       .then(({ user: currentUser }) => dispatch(updateUser(currentUser)))
       .finally(() => setCheckingOnboarding(false));
-  }, [dispatch, isAuthenticated, user?.onboardingComplete]);
+  }, [dispatch, isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -149,12 +152,31 @@ function RouteFallback() {
 }
 
 function ProtectedOnboarding() {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  return isAuthenticated ? (
-    <BusinessSetupPage />
-  ) : (
-    <Navigate to="/login" replace />
+  const { isAuthenticated, user } = useSelector(
+    (state: RootState) => state.auth,
   );
+  const dispatch = useDispatch();
+  const [checking, setChecking] = useState(isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setChecking(false);
+      return;
+    }
+
+    setChecking(true);
+    void apiRequest<{ user: User }>("/auth/me")
+      .then(({ user: currentUser }) => dispatch(updateUser(currentUser)))
+      .finally(() => setChecking(false));
+  }, [dispatch, isAuthenticated]);
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (checking) return <RouteFallback />;
+  if (user?.onboardingComplete) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <BusinessSetupPage />;
 }
 
 function App() {

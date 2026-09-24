@@ -53,7 +53,7 @@ export async function getPublicBusiness(req: Request, res: Response) {
     slug: req.params.slug,
     isActive: true,
   }).select(
-    "name slug description openHour closeHour slotsPerHour slotIntervalMinutes isOpen24Hours courtsCount disabledCourts settings",
+    "name slug currency description openHour closeHour slotsPerHour slotIntervalMinutes isOpen24Hours courtsCount disabledCourts settings",
   );
   if (!business)
     return res
@@ -95,6 +95,7 @@ export async function getPublicBusiness(req: Request, res: Response) {
       business: {
         name: business.name,
         slug: business.slug,
+        currency: business.currency ?? "PHP",
         description: business.description,
         openHour: business.openHour ?? "08:00",
         closeHour: business.closeHour ?? "20:00",

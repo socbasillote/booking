@@ -3,6 +3,7 @@ import { Schema, model, type Document, type Types } from "mongoose";
 export interface IBusiness extends Document {
   name: string;
   slug: string;
+  currency: string;
   ownerId: Types.ObjectId;
   description?: string;
   openHour: string;
@@ -337,6 +338,13 @@ const businessSchema = new Schema<IBusiness>(
       required: true,
       unique: true,
       lowercase: true,
+      trim: true,
+    },
+    currency: {
+      type: String,
+      required: true,
+      default: "PHP",
+      uppercase: true,
       trim: true,
     },
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },

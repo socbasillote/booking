@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { z } from "zod";
 import { Business } from "../models/Business.js";
+import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
@@ -174,6 +175,12 @@ const businessSchema = z.object({
     .trim()
     .min(2)
     .regex(/^[a-z0-9-]+$/),
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/)
+    .default("PHP"),
   description: z.string().trim().max(500).optional().default(""),
   openHour: z
     .string()
@@ -211,6 +218,7 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
   let business = user.businessIds[0]
     ? await Business.findById(user.businessIds[0])
     : null;
+  const isNewBusiness = !business;
   const slotIntervalMinutes = input.slotIntervalMinutes ?? 30;
   const isOpen24Hours =
     Boolean(input.isOpen24Hours) ||
@@ -528,6 +536,21 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
     });
     user.businessIds = [business._id];
     await user.save();
+  }
+
+  if (isNewBusiness) {
+    await Service.create({
+      businessId: business._id,
+      name: "Pickleball",
+      description: "Pickleball court booking",
+      price: 0,
+      durationMinutes: 60,
+      bufferMinutes: 0,
+      category: "Sports",
+      isActive: true,
+      onlineBookingEnabled: true,
+      assignedStaffIds: [],
+    });
   }
 
   return res.json({

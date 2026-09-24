@@ -42,6 +42,7 @@ type BookingResponse = Booking & { _id?: string };
 export function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState("");
+  const [currency, setCurrency] = useState("PHP");
 
   useEffect(() => {
     async function loadDashboard() {
@@ -61,7 +62,21 @@ export function DashboardPage() {
         );
       }
     }
+    async function loadServices() {
+      try {
+        const data = await apiRequest<{
+          currency?: string;
+        }>("/services/");
+        setCurrency(data.currency ?? "PHP");
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load services",
+        );
+      }
+    }
+
     void loadDashboard();
+    void loadServices();
   }, []);
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -72,6 +87,21 @@ export function DashboardPage() {
         .sort((first, second) => first.time.localeCompare(second.time)),
     [bookings, todayKey],
   );
+
+  function currencyChange(currency) {
+    switch (currency) {
+      case "USD":
+        return "$";
+      case "EUR":
+        return "€";
+      case "GBP":
+        return "£";
+      case "yen":
+        return "¥";
+      default:
+        return "₱";
+    }
+  }
 
   const stats = useMemo(() => {
     const pending = bookings.filter((row) => row.status === "Pending");
@@ -90,7 +120,7 @@ export function DashboardPage() {
       },
       {
         label: "Today's Revenue",
-        value: `₱${todayRevenue.toLocaleString()}`,
+        value: `${currencyChange(currency)}${todayRevenue.toLocaleString()}`,
         change: "From today's bookings",
         icon: CreditCard,
       },
