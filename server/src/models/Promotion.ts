@@ -5,6 +5,7 @@ export type PromotionDiscountType = "percentage" | "fixed";
 
 export interface IPromotion extends Document {
   businessId: Types.ObjectId;
+  code: string;
   title: string;
   description: string;
   discountType: PromotionDiscountType;
@@ -24,6 +25,7 @@ const promotionSchema = new Schema<IPromotion>(
       required: true,
       index: true,
     },
+    code: { type: String, required: true, trim: true, uppercase: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     discountType: {
@@ -44,5 +46,6 @@ const promotionSchema = new Schema<IPromotion>(
 );
 
 promotionSchema.index({ businessId: 1, createdAt: -1 });
+promotionSchema.index({ businessId: 1, code: 1 }, { unique: true, sparse: true });
 
 export const Promotion = model<IPromotion>("Promotion", promotionSchema);

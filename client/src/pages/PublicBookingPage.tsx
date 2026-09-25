@@ -122,6 +122,7 @@ export function PublicBookingPage() {
   const [busy, setBusy] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("PayMongo");
+  const [promotionCode, setPromotionCode] = useState("");
   const [courtPage, setCourtPage] = useState(0);
   const bookingFormRef = useRef<HTMLFormElement | null>(null);
   const dateScrollerRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +150,7 @@ export function PublicBookingPage() {
     data?.business?.closeHour ?? "20:00",
     slotIntervalMinutes,
   );
+  const baseTotal = (data?.services[0]?.price ?? 0) * selectedSlots.length;
 
   function isDateFullyBooked(date: string) {
     const dayBookings = (data?.bookings ?? []).filter(
@@ -165,6 +167,7 @@ export function PublicBookingPage() {
 
     setSelectedDate(date);
     setSelectedSlots([]);
+    setPromotionCode("");
     setSelectedCourt(nextCourt);
     setCourtPage(0);
   }
@@ -287,6 +290,7 @@ export function PublicBookingPage() {
         })),
         payment,
         paymentMethod: selectedPaymentMethod,
+        promotionCode: promotionCode.trim().toUpperCase(),
       };
 
       const next = await apiRequest<Confirmation>(`/public/${slug}/bookings`, {
@@ -1046,15 +1050,24 @@ export function PublicBookingPage() {
                 </label>
               </div>
 
+              <label className="mt-5 block text-sm font-black uppercase tracking-[0.2em] text-slate-700">
+                Promotion code
+                <input
+                  name="promotionCode"
+                  value={promotionCode}
+                  onChange={(event) => setPromotionCode(event.target.value)}
+                  placeholder="Enter a code from the club"
+                  autoCapitalize="characters"
+                  className="mt-2 w-full rounded-2xl border border-emerald-900/10 bg-[#eef6ed] px-4 py-3 text-sm font-semibold uppercase tracking-normal text-slate-950 outline-none transition focus:border-emerald-700"
+                />
+              </label>
+
               <div className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-emerald-900/10 bg-[#eef6ed] px-4 py-3">
                 <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                  Booking total
+                  Booking subtotal
                 </span>
                 <span className="text-lg font-black text-emerald-950">
-                  {data?.business.currency ?? "PHP"}{" "}
-                  {(
-                    (data?.services[0]?.price ?? 0) * selectedSlots.length
-                  ).toLocaleString()}
+                  {data?.business.currency ?? "PHP"} {baseTotal.toLocaleString()}
                 </span>
               </div>
 
@@ -1102,11 +1115,13 @@ export function PublicBookingPage() {
                   Total amount
                 </p>
                 <p className="mt-1 text-2xl font-black text-emerald-950">
-                  {data?.business.currency ?? "PHP"}{" "}
-                  {(
-                    (data?.services[0]?.price ?? 0) * selectedSlots.length
-                  ).toLocaleString()}
+                  {data?.business.currency ?? "PHP"} {baseTotal.toLocaleString()}
                 </p>
+                {promotionCode.trim() && (
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">
+                    Promotion code will be validated when booking is submitted
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-slate-500">
                   {selectedSlots.length} court time
                   {selectedSlots.length === 1 ? "" : "s"} · {paymentMethod}

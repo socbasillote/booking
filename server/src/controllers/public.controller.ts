@@ -5,6 +5,7 @@ import { Business } from "../models/Business.js";
 import { Booking } from "../models/Booking.js";
 import { syncCustomerFromBooking } from "../services/customer.service.js";
 import { Service } from "../models/Service.js";
+import { Promotion } from "../models/Promotion.js";
 import { sendBookingConfirmation } from "../services/email.service.js";
 import {
   createPayMongoCheckoutSession,
@@ -46,7 +47,29 @@ const bookingSchema = z.object({
     "PayPal",
     "PayMongo",
   ]),
+  promotionCode: z.string().trim().max(30).optional().or(z.literal("")),
 });
+
+function promotionAppliesToDate(
+  promotion: { startsAt?: Date; endsAt?: Date },
+  date: string,
+) {
+  const startDate = promotion.startsAt?.toISOString().slice(0, 10);
+  const endDate = promotion.endsAt?.toISOString().slice(0, 10);
+  return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+}
+
+function calculateDiscount(
+  total: number,
+  promotion?: { discountType: "percentage" | "fixed"; discountValue: number },
+) {
+  if (!promotion) return 0;
+  const discount =
+    promotion.discountType === "percentage"
+      ? total * (promotion.discountValue / 100)
+      : promotion.discountValue;
+  return Math.min(total, Math.max(0, discount));
+}
 
 export async function getPublicBusiness(req: Request, res: Response) {
   const business = await Business.findOne({
@@ -310,6 +333,38 @@ export async function createPublicBooking(req: Request, res: Response) {
     });
   }
 
+  const normalizedPromotionCode = input.promotionCode?.trim().toUpperCase();
+  const promotion = normalizedPromotionCode
+    ? await Promotion.findOne({
+        code: normalizedPromotionCode,
+        businessId: business._id,
+        status: { $in: ["Live", "Scheduled"] },
+      }).select("code title discountType discountValue startsAt endsAt")
+    : null;
+  if (normalizedPromotionCode && !promotion) {
+    return res.status(400).json({
+      success: false,
+      message: "This promotion is no longer available.",
+    });
+  }
+  if (promotion && !promotionAppliesToDate(promotion, input.date)) {
+    return res.status(400).json({
+      success: false,
+      message: "This promotion is not valid for the selected booking date.",
+    });
+  }
+
+  const baseTotal = servicePrice * chosenSlots.length;
+  const discountAmount = calculateDiscount(baseTotal, promotion ?? undefined);
+  const discountPerSlot = discountAmount / chosenSlots.length;
+  const discountedTotal = baseTotal - discountAmount;
+  if (input.paymentMethod === "PayMongo" && discountedTotal <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "The discounted total must be greater than zero for online payment.",
+    });
+  }
+
   const created = [];
   await syncCustomerFromBooking({
     businessId: business._id.toString(),
@@ -342,7 +397,11 @@ export async function createPublicBooking(req: Request, res: Response) {
       email: input.email,
       phone: input.phone,
       service: input.service,
-      amount: servicePrice,
+      amount: servicePrice - discountPerSlot,
+      promotionId: promotion?._id,
+      promotionCode: promotion?.code,
+      promotionTitle: promotion?.title,
+      discountAmount: discountPerSlot,
       staff: input.staff,
       court: slot.court,
       date: input.date,
@@ -362,7 +421,7 @@ export async function createPublicBooking(req: Request, res: Response) {
       const firstBooking = created[0];
       const statusPageUrl = `${process.env.CLIENT_URL ?? "http://localhost:5173"}/status/${firstBooking.confirmationCode}`;
       const checkout = await createPayMongoCheckoutSession({
-        amount: Math.round(servicePrice * 100) * created.length,
+        amount: Math.round(discountedTotal * 100),
         description: `${business.name} - ${input.service}`,
         customerEmail: input.email,
         customerName: input.customer,

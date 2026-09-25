@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 const promotionFields = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(3, "Promotion code must be at least 3 characters")
+    .max(30, "Promotion code cannot exceed 30 characters")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Promotion code can only use letters, numbers, _ or -")
+    .transform((value) => value.toUpperCase()),
   title: z.string().trim().min(2, "Promotion title is required"),
   description: z.string().trim().min(2, "Promotion description is required"),
   discountType: z.enum(["percentage", "fixed"]),

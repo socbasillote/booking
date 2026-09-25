@@ -7,6 +7,10 @@ export interface IBooking extends Document {
   phone?: string;
   service: string;
   amount: number;
+  promotionId?: Types.ObjectId;
+  promotionCode?: string;
+  promotionTitle?: string;
+  discountAmount?: number;
   staff: string;
   court: string;
   date: string;
@@ -38,6 +42,10 @@ const bookingSchema = new Schema<IBooking>(
     phone: { type: String, trim: true, default: "" },
     service: { type: String, required: true, trim: true },
     amount: { type: Number, required: true, min: 0, default: 0 },
+    promotionId: { type: Schema.Types.ObjectId, ref: "Promotion" },
+    promotionCode: { type: String, trim: true, uppercase: true },
+    promotionTitle: { type: String, trim: true },
+    discountAmount: { type: Number, min: 0, default: 0 },
     staff: { type: String, required: true, default: "Maria", trim: true },
     court: { type: String, required: true, default: "Court 1", trim: true },
     date: { type: String, required: true },

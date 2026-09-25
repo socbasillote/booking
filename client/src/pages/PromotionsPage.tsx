@@ -4,6 +4,7 @@ import { apiRequest } from "../lib/api";
 
 type Promotion = {
   id: string;
+  code: string;
   title: string;
   description: string;
   discountType: "percentage" | "fixed";
@@ -53,6 +54,7 @@ export function PromotionsPage() {
     const startsAt = String(form.get("startsAt") ?? "");
     const endsAt = String(form.get("endsAt") ?? "");
     const payload = {
+      code: String(form.get("code") ?? "").trim().toUpperCase(),
       title: String(form.get("title") ?? "").trim(),
       description: String(form.get("description") ?? "").trim(),
       discountType: String(form.get("discountType")) as Promotion["discountType"],
@@ -164,6 +166,9 @@ export function PromotionsPage() {
             <h2 className="mt-4 truncate text-xl font-semibold text-slate-900">
               {promo.title}
             </h2>
+            <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+              Code: {promo.code || "Not set"}
+            </p>
             <p className="mt-2 min-h-10 text-sm text-slate-500">{promo.description}</p>
             <p className="mt-4 text-lg font-semibold text-slate-900">
               {promo.discountType === "percentage" ? `${promo.discountValue}% off` : `₱${promo.discountValue.toLocaleString()} off`}
@@ -195,6 +200,14 @@ export function PromotionsPage() {
               {editingPromotion ? "Edit promotion" : "Create promotion"}
             </h2>
             <div className="mt-5 space-y-4">
+              <input
+                name="code"
+                required
+                pattern="[A-Za-z0-9_-]+"
+                defaultValue={editingPromotion?.code ?? ""}
+                placeholder="Promotion code (e.g. SUMMER20)"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 uppercase"
+              />
               <input
                 name="title"
                 required

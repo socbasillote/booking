@@ -57,6 +57,11 @@ export async function createPromotion(req: AuthRequest, res: Response) {
         errors: error.issues.map((issue) => issue.message),
       });
     }
+    if ((error as { code?: number }).code === 11000) {
+      return res
+        .status(409)
+        .json({ success: false, message: "That promotion code is already in use" });
+    }
     return res
       .status(500)
       .json({ success: false, message: "Unable to create promotion" });
@@ -94,6 +99,11 @@ export async function updatePromotion(req: AuthRequest, res: Response) {
         message: "Validation failed",
         errors: error.issues.map((issue) => issue.message),
       });
+    }
+    if ((error as { code?: number }).code === 11000) {
+      return res
+        .status(409)
+        .json({ success: false, message: "That promotion code is already in use" });
     }
     return res
       .status(500)
