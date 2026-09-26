@@ -33,7 +33,16 @@ export function BookingsPage() {
   const [open, setOpen] = useState(params.get("new") === "1");
   const [query, setQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | Booking["status"]>("");
+  const [statusFilter, setStatusFilter] = useState<"" | Booking["status"]>(
+    () => {
+      const initialStatus = params.get("status");
+      return ["Confirmed", "Pending", "Completed", "Rejected"].includes(
+        initialStatus ?? "",
+      )
+        ? (initialStatus as Booking["status"])
+        : "";
+    },
+  );
   const [paymentFilter, setPaymentFilter] = useState<"" | Booking["payment"]>(
     "",
   );

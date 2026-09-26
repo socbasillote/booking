@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Bell,
+  BarChart3,
   BriefcaseBusiness,
   CalendarDays,
   Clock3,
@@ -44,7 +45,7 @@ const operationsNav = [
 const growthNav = [
   { label: "Payments", to: "/bookings", icon: CreditCard },
   { label: "Promotions", to: "/promotions", icon: Megaphone },
-  { label: "Reports", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Reports", to: "/reports", icon: BarChart3 },
 ];
 
 const footerNav = [

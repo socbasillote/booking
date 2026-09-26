@@ -14,6 +14,11 @@ const DashboardPage = lazy(() =>
     default: module.DashboardPage,
   })),
 );
+const ReportsPage = lazy(() =>
+  import("./pages/ReportsPage").then((module) => ({
+    default: module.ReportsPage,
+  })),
+);
 const BookingsPage = lazy(() =>
   import("./pages/BookingsPage").then((module) => ({
     default: module.BookingsPage,
@@ -150,7 +155,16 @@ function ProtectedApp() {
             )
           }
         />
-        <Route path="/reports" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/reports"
+          element={
+            user?.role === "staff" ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <ReportsPage />
+            )
+          }
+        />
         <Route path="/onboarding" element={<BusinessSetupPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
