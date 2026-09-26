@@ -9,8 +9,64 @@ const settingsSchema = z
   .object({
     booking: z
       .object({
+        availability: z
+          .object({
+            businessHours: z.array(
+              z.object({
+                day: z.enum(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
+                open: z.boolean(),
+                startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+                endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+              }),
+            ),
+            staffHours: z.array(
+              z.object({
+                staffId: z.string(),
+                staffName: z.string(),
+                days: z.array(
+                  z.enum(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
+                ),
+                startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+                endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/),
+              }),
+            ),
+            exceptions: z.array(
+              z.object({
+                id: z.string(),
+                title: z.string().trim().min(1),
+                type: z.enum([
+                  "Holiday",
+                  "Vacation",
+                  "Blocked date",
+                  "Unavailable period",
+                ]),
+                date: z.string(),
+                endDate: z.string().optional(),
+                startTime: z.string(),
+                endTime: z.string(),
+                allDay: z.boolean(),
+              }),
+            ),
+            rules: z.object({
+              minAdvanceHours: z.number().int().min(0).max(8760),
+              maxAdvanceDays: z.number().int().min(1).max(730),
+              cancellationCutoffHours: z.number().int().min(0).max(8760),
+              bookingIntervalMinutes: z.number().int().min(5).max(240),
+              bufferMinutes: z.number().int().min(0).max(240),
+            }),
+            resources: z.array(
+              z.object({
+                id: z.string(),
+                name: z.string().trim().min(1),
+                type: z.string().trim().min(1),
+                quantity: z.number().int().min(1).max(100),
+                enabled: z.boolean(),
+              }),
+            ),
+          })
+          .optional(),
         slotsPerHour: z.number().int().min(1).max(12).optional(),
-        slotIntervalMinutes: z.number().int().min(15).max(180).optional(),
+        slotIntervalMinutes: z.number().int().min(5).max(240).optional(),
         isOpen24Hours: z.boolean().optional(),
         courtsCount: z.number().int().min(1).optional(),
         bookingTypes: z
@@ -192,9 +248,9 @@ const businessSchema = z.object({
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
     .default("20:00"),
   slotsPerHour: z.number().int().min(1).max(12).optional().default(2),
-  slotIntervalMinutes: z.number().int().min(15).max(180).optional().default(30),
+  slotIntervalMinutes: z.number().int().min(5).max(240).optional().default(30),
   isOpen24Hours: z.boolean().optional().default(false),
-  courtsCount: z.number().int().min(1).optional().default(3),
+  courtsCount: z.number().int().min(1).optional().default(1),
   disabledCourts: z.array(z.string().trim().min(1)).optional().default([]),
   settings: settingsSchema.optional(),
 });
@@ -228,7 +284,7 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
   const normalizedCloseHour = isOpen24Hours ? "23:30" : input.closeHour;
   const slotsPerHour = input.slotsPerHour ?? 2;
   const validCourtNames = Array.from(
-    { length: Math.max(1, input.courtsCount ?? 3) },
+    { length: Math.max(1, input.courtsCount ?? 1) },
     (_, index) => `Court ${index + 1}`,
   );
   const disabledCourts = [
@@ -499,7 +555,7 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
     business.slotsPerHour = slotsPerHour;
     business.slotIntervalMinutes = slotIntervalMinutes;
     business.isOpen24Hours = isOpen24Hours;
-    business.courtsCount = input.courtsCount ?? 3;
+    business.courtsCount = input.courtsCount ?? 1;
     business.disabledCourts = disabledCourts;
     Object.assign(business, input, {
       settings: mergedSettings,
@@ -508,7 +564,7 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
       slotsPerHour,
       slotIntervalMinutes,
       isOpen24Hours,
-      courtsCount: input.courtsCount ?? 3,
+      courtsCount: input.courtsCount ?? 1,
       disabledCourts,
     });
     await business.save();
@@ -531,7 +587,7 @@ export async function saveBusiness(req: AuthRequest, res: Response) {
       slotsPerHour,
       slotIntervalMinutes,
       isOpen24Hours,
-      courtsCount: input.courtsCount ?? 3,
+      courtsCount: input.courtsCount ?? 1,
       disabledCourts,
       settings: normalizedSettings,
     });

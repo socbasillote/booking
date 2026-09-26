@@ -19,6 +19,42 @@ type BookingEntry = {
   court?: string;
 };
 
+type PublicAvailability = {
+  businessHours?: Array<{
+    day: string;
+    open: boolean;
+    startTime: string;
+    endTime: string;
+  }>;
+  staffHours?: Array<{
+    staffId: string;
+    staffName: string;
+    days: string[];
+    startTime: string;
+    endTime: string;
+  }>;
+  exceptions?: Array<{
+    date: string;
+    endDate?: string;
+    startTime: string;
+    endTime: string;
+    allDay: boolean;
+  }>;
+  rules?: {
+    minAdvanceHours?: number;
+    maxAdvanceDays?: number;
+    bookingIntervalMinutes?: number;
+    bufferMinutes?: number;
+  };
+  resources?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    quantity: number;
+    enabled: boolean;
+  }>;
+};
+
 type BusinessData = {
   business: {
     name: string;
@@ -31,6 +67,7 @@ type BusinessData = {
     isOpen24Hours?: boolean;
     courtsCount?: number;
     disabledCourts?: string[];
+    availability?: PublicAvailability;
   };
   services: BusinessService[];
   bookings?: BookingEntry[];
@@ -76,7 +113,7 @@ function getSlots(
 ) {
   const start = minutesFromTime(openHour);
   const end = minutesFromTime(closeHour);
-  const interval = Math.max(15, Number(slotIntervalMinutes) || 30);
+  const interval = Math.max(5, Number(slotIntervalMinutes) || 30);
   const slots: string[] = [];
 
   for (let minute = start; minute < end; minute += interval) {
@@ -111,6 +148,21 @@ function getDateOptions(daysAhead = 45) {
   return dates;
 }
 
+function dayForDate(date: string) {
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+    new Date(`${date}T12:00:00`).getDay()
+  ];
+}
+
+function exceptionCoversDate(
+  date: string,
+  exception: NonNullable<PublicAvailability["exceptions"]>[number],
+) {
+  return (
+    date >= exception.date && date <= (exception.endDate || exception.date)
+  );
+}
+
 export function PublicBookingPage() {
   const { slug = "" } = useParams();
   const [data, setData] = useState<BusinessData | null>(null);
@@ -124,6 +176,7 @@ export function PublicBookingPage() {
   const [paymentMethod, setPaymentMethod] = useState("PayMongo");
   const [promotionCode, setPromotionCode] = useState("");
   const [courtPage, setCourtPage] = useState(0);
+  const [selectedStaffId, setSelectedStaffId] = useState("");
   const bookingFormRef = useRef<HTMLFormElement | null>(null);
   const dateScrollerRef = useRef<HTMLDivElement | null>(null);
   const dragStartX = useRef<number | null>(null);
@@ -131,12 +184,20 @@ export function PublicBookingPage() {
   const dragThreshold = 8;
   const isDraggingDatesRef = useRef(false);
 
-  const courtsCount = Math.max(1, Number(data?.business?.courtsCount ?? 3));
-  const disabledCourtSet = new Set(data?.business?.disabledCourts ?? []);
-  const allCourtNames = Array.from(
-    { length: courtsCount },
-    (_, index) => `Court ${index + 1}`,
+  const availability = data?.business?.availability;
+  const courtResources = (availability?.resources ?? []).filter(
+    (resource) => resource.type.toLowerCase() === "court",
   );
+  const courtsCount = Math.max(1, Number(data?.business?.courtsCount ?? 1));
+  const allCourtNames = courtResources.length
+    ? courtResources.map((resource) => resource.name)
+    : Array.from({ length: courtsCount }, (_, index) => `Court ${index + 1}`);
+  const disabledCourtSet = new Set([
+    ...(data?.business?.disabledCourts ?? []),
+    ...courtResources
+      .filter((resource) => !resource.enabled)
+      .map((resource) => resource.name),
+  ]);
   const availableCourtNames = allCourtNames.filter(
     (court) => !disabledCourtSet.has(court),
   );
@@ -144,28 +205,142 @@ export function PublicBookingPage() {
     ? selectedCourt
     : (availableCourtNames[0] ?? "Court 1");
 
-  const slotIntervalMinutes = Number(data?.business?.slotIntervalMinutes ?? 30);
-  const allSlots = getSlots(
-    data?.business?.openHour ?? "08:00",
-    data?.business?.closeHour ?? "20:00",
-    slotIntervalMinutes,
+  const slotIntervalMinutes = Number(
+    availability?.rules?.bookingIntervalMinutes ??
+      data?.business?.slotIntervalMinutes ??
+      30,
   );
+  const bookingRules = availability?.rules;
+
+  function hoursForDate(date: string) {
+    const day = dayForDate(date);
+    const configured = availability?.businessHours?.find(
+      (entry) => entry.day === day,
+    );
+    return (
+      configured ?? {
+        day,
+        open: true,
+        startTime: data?.business?.openHour ?? "08:00",
+        endTime: data?.business?.closeHour ?? "20:00",
+      }
+    );
+  }
+
+  function staffForDate(date: string) {
+    const day = dayForDate(date);
+    const businessHours = hoursForDate(date);
+    if (!businessHours.open) return [];
+    return (availability?.staffHours ?? []).filter(
+      (staff) =>
+        staff.days.includes(day) &&
+        minutesFromTime(staff.startTime) <
+          minutesFromTime(businessHours.endTime) &&
+        minutesFromTime(staff.endTime) >
+          minutesFromTime(businessHours.startTime) &&
+        slotsForDate(date, staff.staffId).length > 0,
+    );
+  }
+
+  function slotsForDate(date: string, staffId?: string, court?: string) {
+    const hours = hoursForDate(date);
+    if (!hours.open) return [];
+    const staff = staffId
+      ? availability?.staffHours?.find((entry) => entry.staffId === staffId)
+      : undefined;
+    if (staffId && (!staff || !staff.days.includes(dayForDate(date))))
+      return [];
+    const exceptions = (availability?.exceptions ?? []).filter((entry) =>
+      exceptionCoversDate(date, entry),
+    );
+    if (exceptions.some((entry) => entry.allDay)) return [];
+    const interval = Math.max(5, Number(slotIntervalMinutes) || 30);
+    const minAdvanceMs =
+      Math.max(0, Number(bookingRules?.minAdvanceHours ?? 0)) * 60 * 60 * 1000;
+    const buffer = Math.max(0, Number(bookingRules?.bufferMinutes ?? 0));
+
+    return getSlots(hours.startTime, hours.endTime, interval).filter((slot) => {
+      const start = minutesFromTime(slot);
+      const end = start + interval;
+      if (
+        staff &&
+        (start < minutesFromTime(staff.startTime) ||
+          end > minutesFromTime(staff.endTime))
+      )
+        return false;
+      if (new Date(`${date}T${slot}:00`).getTime() < Date.now() + minAdvanceMs)
+        return false;
+      if (
+        exceptions.some(
+          (entry) =>
+            start < minutesFromTime(entry.endTime) &&
+            end > minutesFromTime(entry.startTime),
+        )
+      )
+        return false;
+      if (court && buffer > 0) {
+        const overlapsBooking = (data?.bookings ?? []).some(
+          (entry) =>
+            entry.date === date &&
+            entry.court === court &&
+            Math.abs(minutesFromTime(entry.time) - start) < interval + buffer,
+        );
+        const overlapsSelection = selectedSlots.some(
+          (entry) =>
+            entry.date === date &&
+            entry.court === court &&
+            entry.time !== slot &&
+            Math.abs(minutesFromTime(entry.time) - start) < interval + buffer,
+        );
+        if (overlapsBooking || overlapsSelection) return false;
+      }
+      return true;
+    });
+  }
+
+  const maxAdvanceDays = Math.max(
+    1,
+    Number(bookingRules?.maxAdvanceDays ?? 45),
+  );
+  const hasStaffSchedules = (availability?.staffHours ?? []).length > 0;
+  const dateOptions = getDateOptions(maxAdvanceDays + 1).filter((date) => {
+    const staff = staffForDate(date);
+    return hasStaffSchedules
+      ? staff.some((entry) => slotsForDate(date, entry.staffId).length > 0)
+      : slotsForDate(date).length > 0;
+  });
+  const staffOptions = selectedDate ? staffForDate(selectedDate) : [];
   const baseTotal = (data?.services[0]?.price ?? 0) * selectedSlots.length;
 
   function isDateFullyBooked(date: string) {
-    const dayBookings = (data?.bookings ?? []).filter(
-      (entry) => entry.date === date,
-    );
+    const staff = staffForDate(date);
+    const slots = hasStaffSchedules
+      ? staff.flatMap((entry) => slotsForDate(date, entry.staffId))
+      : slotsForDate(date);
     return (
-      allSlots.length > 0 &&
-      allSlots.every((slot) => dayBookings.some((entry) => entry.time === slot))
+      slots.length === 0 ||
+      availableCourtNames.length === 0 ||
+      availableCourtNames.every((court) =>
+        slots.every((slot) =>
+          (data?.bookings ?? []).some(
+            (entry) =>
+              entry.date === date &&
+              entry.time === slot &&
+              entry.court === court,
+          ),
+        ),
+      )
     );
   }
 
   function chooseDate(date: string) {
     const nextCourt = availableCourtNames[0] ?? "Court 1";
+    const nextStaff = staffForDate(date).find(
+      (staff) => slotsForDate(date, staff.staffId).length > 0,
+    );
 
     setSelectedDate(date);
+    setSelectedStaffId(nextStaff?.staffId ?? "");
     setSelectedSlots([]);
     setPromotionCode("");
     setSelectedCourt(nextCourt);
@@ -219,16 +394,105 @@ export function PublicBookingPage() {
     apiRequest<BusinessData>(`/public/${slug}`)
       .then((payload) => {
         setData(payload);
+        const maxDays = Math.max(
+          1,
+          Number(payload.business.availability?.rules?.maxAdvanceDays ?? 45),
+        );
         const firstAvailable =
-          getDateOptions(45)[0] ?? dateKeyFromDate(new Date());
-        const allowedCourtNames = Array.from(
-          { length: Math.max(1, Number(payload.business?.courtsCount ?? 3)) },
-          (_, index) => `Court ${index + 1}`,
-        ).filter(
-          (court) => !(payload.business?.disabledCourts ?? []).includes(court),
+          getDateOptions(maxDays + 1).find((date) => {
+            const day = dayForDate(date);
+            const hours = payload.business.availability?.businessHours?.find(
+              (entry) => entry.day === day,
+            );
+            const closedByException = (
+              payload.business.availability?.exceptions ?? []
+            ).some((entry) => entry.allDay && exceptionCoversDate(date, entry));
+            if (hours && !hours.open) return false;
+            if (closedByException) return false;
+            const start =
+              hours?.startTime ?? payload.business.openHour ?? "08:00";
+            const end = hours?.endTime ?? payload.business.closeHour ?? "20:00";
+            const interval =
+              payload.business.availability?.rules?.bookingIntervalMinutes ??
+              payload.business.slotIntervalMinutes ??
+              30;
+            const minAdvance =
+              Number(
+                payload.business.availability?.rules?.minAdvanceHours ?? 0,
+              ) *
+              60 *
+              60 *
+              1000;
+            const futureSlots = getSlots(start, end, interval).filter(
+              (slot) =>
+                new Date(`${date}T${slot}:00`).getTime() >=
+                Date.now() + minAdvance,
+            );
+            const dayStaff = (
+              payload.business.availability?.staffHours ?? []
+            ).filter((entry) => entry.days.includes(day));
+            const hasStaffSchedules =
+              (payload.business.availability?.staffHours ?? []).length > 0;
+            return futureSlots.some(
+              (slot) =>
+                !hasStaffSchedules ||
+                dayStaff.some(
+                  (staff) =>
+                    minutesFromTime(slot) >= minutesFromTime(staff.startTime) &&
+                    minutesFromTime(slot) + Number(interval) <=
+                      minutesFromTime(staff.endTime),
+                ),
+            );
+          }) ?? dateKeyFromDate(new Date());
+        const configuredCourts = (
+          payload.business.availability?.resources ?? []
+        )
+          .filter((resource) => resource.type.toLowerCase() === "court")
+          .map((resource) => resource.name);
+        const courtNames = configuredCourts.length
+          ? configuredCourts
+          : Array.from(
+              {
+                length: Math.max(1, Number(payload.business.courtsCount ?? 1)),
+              },
+              (_, index) => `Court ${index + 1}`,
+            );
+        const allowedCourtNames = courtNames.filter(
+          (court) =>
+            !(payload.business.disabledCourts ?? []).includes(court) &&
+            !(payload.business.availability?.resources ?? []).some(
+              (resource) =>
+                resource.name === court &&
+                resource.type.toLowerCase() === "court" &&
+                !resource.enabled,
+            ),
         );
         setSelectedDate(firstAvailable);
         setSelectedCourt(allowedCourtNames[0] ?? "Court 1");
+        const initialDay = dayForDate(firstAvailable);
+        const initialHours = payload.business.availability?.businessHours?.find(
+          (entry) => entry.day === initialDay,
+        );
+        const initialStart =
+          initialHours?.startTime ?? payload.business.openHour ?? "08:00";
+        const initialEnd =
+          initialHours?.endTime ?? payload.business.closeHour ?? "20:00";
+        const initialInterval =
+          payload.business.availability?.rules?.bookingIntervalMinutes ??
+          payload.business.slotIntervalMinutes ??
+          30;
+        setSelectedStaffId(
+          payload.business.availability?.staffHours?.find(
+            (staff) =>
+              staff.days.includes(initialDay) &&
+              getSlots(initialStart, initialEnd, initialInterval).some(
+                (slot) =>
+                  minutesFromTime(slot) >= minutesFromTime(staff.startTime) &&
+                  minutesFromTime(slot) + Number(initialInterval) <=
+                    minutesFromTime(staff.endTime),
+              ),
+          )?.staffId ?? "",
+        );
         setSelectedSlots([]);
       })
       .catch((err) =>
@@ -262,7 +526,7 @@ export function PublicBookingPage() {
           !isValidBookingTime(
             slot.time,
             slotIntervalMinutes,
-            data?.business?.openHour ?? "08:00",
+            hoursForDate(date).startTime,
           )
         ) {
           throw new Error(
@@ -282,7 +546,10 @@ export function PublicBookingPage() {
         email: String(form.get("email")),
         phone: String(form.get("phone")),
         service: String(data?.services[0]?.name ?? "Court booking"),
-        staff: "Maria",
+        staff:
+          availability?.staffHours?.find(
+            (staff) => staff.staffId === selectedStaffId,
+          )?.staffName ?? "Maria",
         date,
         slots: selectedSlots.map((slot) => ({
           court: slot.court,
@@ -543,7 +810,7 @@ export function PublicBookingPage() {
                     }}
                     className="mt-5 flex cursor-grab gap-2 overflow-x-auto pb-2 scroll-smooth"
                   >
-                    {getDateOptions(45).map((date) => {
+                    {dateOptions.map((date) => {
                       const booked = isDateFullyBooked(date);
                       const isActive = selectedDate === date;
 
@@ -613,6 +880,26 @@ export function PublicBookingPage() {
                   </span>
                 </div>
 
+                {staffOptions.length > 0 && (
+                  <label className="mb-4 block max-w-sm text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                    Staff member
+                    <select
+                      value={selectedStaffId}
+                      onChange={(event) => {
+                        setSelectedStaffId(event.target.value);
+                        setSelectedSlots([]);
+                      }}
+                      className="mt-2 w-full rounded-xl border border-emerald-900/10 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800"
+                    >
+                      {staffOptions.map((staff) => (
+                        <option key={staff.staffId} value={staff.staffId}>
+                          {staff.staffName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
                 {!selectedDate ? (
                   <div className="mt-5 rounded-2xl border border-dashed border-emerald-900/15 bg-[#eef6ed] px-4 py-5 text-center">
                     <p className="text-sm font-bold text-slate-500">
@@ -646,6 +933,11 @@ export function PublicBookingPage() {
                           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {visibleCourts.map((court) => {
                               const isDisabled = disabledCourtSet.has(court);
+                              const courtSlots = slotsForDate(
+                                selectedDate,
+                                selectedStaffId || undefined,
+                                court,
+                              );
                               const isSelected =
                                 !isDisabled && activeCourt === court;
 
@@ -726,7 +1018,7 @@ export function PublicBookingPage() {
             "
                                     >
                                       <div className="space-y-2">
-                                        {allSlots.map((slot) => {
+                                        {courtSlots.map((slot) => {
                                           const isBooked = (
                                             data?.bookings ?? []
                                           ).some(
@@ -810,7 +1102,7 @@ export function PublicBookingPage() {
                                     </div>
 
                                     {/* Bottom fade indicates more times below */}
-                                    {allSlots.length > 8 && (
+                                    {courtSlots.length > 8 && (
                                       <div
                                         className={`pointer-events-none absolute bottom-0 left-0 right-1 h-10 rounded-b-2xl bg-gradient-to-t ${
                                           isSelected
@@ -822,7 +1114,7 @@ export function PublicBookingPage() {
                                   </div>
 
                                   {/* Scroll hint */}
-                                  {allSlots.length > 8 && (
+                                  {courtSlots.length > 8 && (
                                     <div
                                       className={`mt-2 text-center text-[9px] font-black uppercase tracking-[0.16em] ${
                                         isSelected
@@ -1067,7 +1359,8 @@ export function PublicBookingPage() {
                   Booking subtotal
                 </span>
                 <span className="text-lg font-black text-emerald-950">
-                  {data?.business.currency ?? "PHP"} {baseTotal.toLocaleString()}
+                  {data?.business.currency ?? "PHP"}{" "}
+                  {baseTotal.toLocaleString()}
                 </span>
               </div>
 
@@ -1115,7 +1408,8 @@ export function PublicBookingPage() {
                   Total amount
                 </p>
                 <p className="mt-1 text-2xl font-black text-emerald-950">
-                  {data?.business.currency ?? "PHP"} {baseTotal.toLocaleString()}
+                  {data?.business.currency ?? "PHP"}{" "}
+                  {baseTotal.toLocaleString()}
                 </p>
                 {promotionCode.trim() && (
                   <p className="mt-1 text-sm font-semibold text-emerald-700">

@@ -37,6 +37,11 @@ const CalendarPage = lazy(() =>
     default: module.CalendarPage,
   })),
 );
+const AvailabilityPage = lazy(() =>
+  import("./pages/AvailabilityPage").then((module) => ({
+    default: module.AvailabilityPage,
+  })),
+);
 const BusinessSetupPage = lazy(() =>
   import("./pages/BusinessSetupPage").then((module) => ({
     default: module.BusinessSetupPage,
@@ -102,6 +107,16 @@ function ProtectedApp() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route
+          path="/availability"
+          element={
+            user?.role === "staff" ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <AvailabilityPage />
+            )
+          }
+        />
         <Route path="/bookings" element={<BookingsPage />} />
         <Route path="/customers" element={<CustomersPage />} />
         <Route path="/services" element={<ServicesPage />} />

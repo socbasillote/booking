@@ -18,6 +18,59 @@ function minutesFromTime(value: string) {
   return hour * 60 + minute;
 }
 
+function dayForDate(date: string) {
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+    new Date(`${date}T12:00:00Z`).getUTCDay()
+  ];
+}
+
+function dateKeyInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function timestampInTimeZone(date: string, time: string, timeZone: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const desiredTimestamp = Date.UTC(year, month - 1, day, hour, minute);
+  let candidateTimestamp = desiredTimestamp;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(candidateTimestamp));
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+    const observedTimestamp = Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+      Number(values.hour),
+      Number(values.minute),
+    );
+    const adjustment = desiredTimestamp - observedTimestamp;
+    candidateTimestamp += adjustment;
+    if (adjustment === 0) break;
+  }
+
+  return candidateTimestamp;
+}
+
 const bookingSchema = z.object({
   customer: z.string().trim().min(2),
   email: z.string().email(),
@@ -127,6 +180,7 @@ export async function getPublicBusiness(req: Request, res: Response) {
         isOpen24Hours,
         courtsCount,
         disabledCourts,
+        availability: business.settings?.booking?.availability,
       },
       services: services.map((service) => ({
         id: service._id.toString(),
@@ -253,17 +307,66 @@ export async function createPublicBooking(req: Request, res: Response) {
       .status(404)
       .json({ success: false, message: "Booking page not found" });
 
+  const availability = business.settings?.booking?.availability;
+  const bookingRules = availability?.rules;
+  const dayKey = dayForDate(input.date);
+  const configuredHours = availability?.businessHours?.find(
+    (entry) => entry.day === dayKey,
+  );
+  if (configuredHours && !configuredHours.open) {
+    return res.status(400).json({
+      success: false,
+      message: "Bookings are not available on this day.",
+    });
+  }
+
+  const timeZone = business.timezone ?? "Asia/Manila";
+  const todayKey = dateKeyInTimeZone(new Date(), timeZone);
+  const dateDistance =
+    (new Date(`${input.date}T00:00:00Z`).getTime() -
+      new Date(`${todayKey}T00:00:00Z`).getTime()) /
+    (24 * 60 * 60 * 1000);
+  if (
+    dateDistance < 0 ||
+    dateDistance > (bookingRules?.maxAdvanceDays ?? 730)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Choose a date inside the booking window.",
+    });
+  }
+
   const isOpen24Hours =
     Boolean(business.isOpen24Hours) ||
     (business.openHour === "00:00" && business.closeHour === "23:30");
-  const openMinutes = minutesFromTime(business.openHour ?? "08:00");
-  const closeMinutes = isOpen24Hours
-    ? 24 * 60
-    : minutesFromTime(business.closeHour ?? "20:00");
+  const openHour = configuredHours?.startTime ?? business.openHour ?? "08:00";
+  const closeHour = configuredHours?.endTime ?? business.closeHour ?? "20:00";
+  const openMinutes = minutesFromTime(openHour);
+  const closeMinutes = configuredHours
+    ? minutesFromTime(closeHour)
+    : isOpen24Hours
+      ? 24 * 60
+      : minutesFromTime(closeHour);
   const slotIntervalMinutes =
+    bookingRules?.bookingIntervalMinutes ??
     business.slotIntervalMinutes ??
     business.settings?.booking?.slotIntervalMinutes ??
     30;
+  const configuredStaff = availability?.staffHours?.find(
+    (entry) => entry.staffName === input.staff,
+  );
+  if (
+    availability?.staffHours?.length &&
+    (!configuredStaff || !configuredStaff.days.includes(dayKey))
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "This staff member is not available on the selected date.",
+    });
+  }
+  const courtResources = (availability?.resources ?? []).filter(
+    (resource) => resource.type.toLowerCase() === "court",
+  );
   const disabledCourts = new Set(
     (business.disabledCourts ?? []).map((court) => court.trim()),
   );
@@ -280,6 +383,19 @@ export async function createPublicBooking(req: Request, res: Response) {
   }
 
   for (const slot of chosenSlots) {
+    const courtResource = courtResources.find(
+      (resource) => resource.name === slot.court,
+    );
+    if (
+      (courtResources.length && !courtResource) ||
+      courtResource?.enabled === false
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Court ${slot.court} is currently unavailable for booking.`,
+      });
+    }
+
     if (disabledCourts.has(slot.court)) {
       return res.status(400).json({
         success: false,
@@ -307,6 +423,81 @@ export async function createPublicBooking(req: Request, res: Response) {
         success: false,
         message: "Booking time must be inside the business open hours.",
       });
+    }
+
+    const slotEndMinutes = selectedMinutes + slotIntervalMinutes;
+    if (
+      configuredStaff &&
+      (selectedMinutes < minutesFromTime(configuredStaff.startTime) ||
+        slotEndMinutes > minutesFromTime(configuredStaff.endTime))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "The selected staff member is not available at that time.",
+      });
+    }
+
+    const dateExceptions = (availability?.exceptions ?? []).filter(
+      (exception) =>
+        input.date >= exception.date &&
+        input.date <= (exception.endDate || exception.date),
+    );
+    if (
+      dateExceptions.some(
+        (exception) =>
+          exception.allDay ||
+          (selectedMinutes < minutesFromTime(exception.endTime) &&
+            slotEndMinutes > minutesFromTime(exception.startTime)),
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "That time is blocked by a business exception.",
+      });
+    }
+
+    const bookingTimestamp = timestampInTimeZone(
+      input.date,
+      slot.time,
+      timeZone,
+    );
+    const minimumAdvanceMs =
+      Math.max(0, bookingRules?.minAdvanceHours ?? 0) * 60 * 60 * 1000;
+    if (bookingTimestamp < Date.now() + minimumAdvanceMs) {
+      return res.status(400).json({
+        success: false,
+        message: "Choose a time that meets the minimum advance booking period.",
+      });
+    }
+
+    const bufferMinutes = Math.max(0, bookingRules?.bufferMinutes ?? 0);
+    if (bufferMinutes > 0) {
+      const nearbyBookings = await Booking.find({
+        businessId: business._id,
+        date: input.date,
+        court: slot.court,
+        status: { $ne: "Rejected" },
+      })
+        .select("time")
+        .lean();
+      const overlapsBooking = nearbyBookings.some(
+        (entry) =>
+          Math.abs(minutesFromTime(entry.time) - selectedMinutes) <
+          slotIntervalMinutes + bufferMinutes,
+      );
+      const overlapsSelection = chosenSlots.some(
+        (entry) =>
+          entry !== slot &&
+          entry.court === slot.court &&
+          Math.abs(minutesFromTime(entry.time) - selectedMinutes) <
+            slotIntervalMinutes + bufferMinutes,
+      );
+      if (overlapsBooking || overlapsSelection) {
+        return res.status(400).json({
+          success: false,
+          message: "Leave the configured buffer between bookings.",
+        });
+      }
     }
   }
 
@@ -361,7 +552,8 @@ export async function createPublicBooking(req: Request, res: Response) {
   if (input.paymentMethod === "PayMongo" && discountedTotal <= 0) {
     return res.status(400).json({
       success: false,
-      message: "The discounted total must be greater than zero for online payment.",
+      message:
+        "The discounted total must be greater than zero for online payment.",
     });
   }
 

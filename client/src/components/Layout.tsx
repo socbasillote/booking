@@ -6,6 +6,7 @@ import {
   Bell,
   BriefcaseBusiness,
   CalendarDays,
+  Clock3,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -37,7 +38,7 @@ const businessNav = [
 const operationsNav = [
   { label: "Services", to: "/services", icon: Sparkles },
   { label: "Team", to: "/team", icon: UserCircle2 },
-  { label: "Availability", to: "/calendar", icon: CalendarDays },
+  { label: "Availability", to: "/availability", icon: Clock3 },
 ];
 
 const growthNav = [
@@ -56,6 +57,7 @@ const restrictedForStaff = new Set([
   "Promotions",
   "Reports",
   "Settings",
+  "Availability",
 ]);
 
 export function Layout({ children }: { children: ReactNode }) {

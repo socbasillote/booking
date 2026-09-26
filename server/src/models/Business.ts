@@ -17,6 +17,45 @@ export interface IBusiness extends Document {
   isActive: boolean;
   settings?: {
     booking: {
+      availability?: {
+        businessHours: Array<{
+          day: string;
+          open: boolean;
+          startTime: string;
+          endTime: string;
+        }>;
+        staffHours: Array<{
+          staffId: string;
+          staffName: string;
+          days: string[];
+          startTime: string;
+          endTime: string;
+        }>;
+        exceptions: Array<{
+          id: string;
+          title: string;
+          type: string;
+          date: string;
+          endDate?: string;
+          startTime: string;
+          endTime: string;
+          allDay: boolean;
+        }>;
+        rules: {
+          minAdvanceHours: number;
+          maxAdvanceDays: number;
+          cancellationCutoffHours: number;
+          bookingIntervalMinutes: number;
+          bufferMinutes: number;
+        };
+        resources: Array<{
+          id: string;
+          name: string;
+          type: string;
+          quantity: number;
+          enabled: boolean;
+        }>;
+      };
       slotsPerHour?: number;
       slotIntervalMinutes?: number;
       isOpen24Hours?: boolean;
@@ -354,9 +393,9 @@ const businessSchema = new Schema<IBusiness>(
     openHour: { type: String, default: "08:00" },
     closeHour: { type: String, default: "20:00" },
     slotsPerHour: { type: Number, default: 2, min: 1, max: 12 },
-    slotIntervalMinutes: { type: Number, default: 30, min: 15, max: 180 },
+    slotIntervalMinutes: { type: Number, default: 30, min: 5, max: 240 },
     isOpen24Hours: { type: Boolean, default: false },
-    courtsCount: { type: Number, default: 3, min: 1 },
+    courtsCount: { type: Number, default: 1, min: 1 },
     disabledCourts: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
     settings: {
