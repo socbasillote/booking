@@ -53,9 +53,6 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Email
-            </label>
             <input
               name="email"
               defaultValue="alicia@sidebooking.com"
@@ -65,9 +62,6 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Password
-            </label>
             <input
               name="password"
               defaultValue="password123"

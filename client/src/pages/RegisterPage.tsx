@@ -7,13 +7,34 @@ import { useState } from "react";
 export function RegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(""); setBusy(true); const form = new FormData(event.currentTarget);
-    try { const data = await apiRequest<{ user: Parameters<typeof login>[0]; token: string }>("/auth/register", { method: "POST", body: JSON.stringify({ name: form.get("name"), email: form.get("email"), password: form.get("password") }) }); saveSession(data); dispatch(login(data.user)); navigate("/onboarding"); }
-    catch (err) { setError(err instanceof Error ? err.message : "Unable to create account"); } finally { setBusy(false); }
+    setError("");
+    setBusy(true);
+    const form = new FormData(event.currentTarget);
+    try {
+      const data = await apiRequest<{
+        user: Parameters<typeof login>[0];
+        token: string;
+      }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.get("name"),
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
+      });
+      saveSession(data);
+      dispatch(login(data.user));
+      navigate("/onboarding");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create account");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -33,33 +54,27 @@ export function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Full name
-            </label>
             <input
-              name="name" defaultValue="Alicia Morgan"
+              name="name"
+              placeholder="Full Name"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="text"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Email
-            </label>
             <input
-              name="email" defaultValue="alicia@sidebooking.com"
+              name="email"
+              placeholder="Email"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="email"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Password
-            </label>
             <input
-              name="password" defaultValue="password123"
+              name="password"
+              placeholder="Password"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="password"
             />
@@ -72,7 +87,9 @@ export function RegisterPage() {
             {busy ? "Creating account…" : "Create account"}
           </button>
         </form>
-        {error && <p className="mt-3 text-center text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+        )}
 
         <p className="mt-5 text-center text-sm text-slate-600">
           Already have an account?{" "}

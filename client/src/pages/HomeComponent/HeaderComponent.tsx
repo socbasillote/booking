@@ -34,13 +34,6 @@ function HeaderComponent() {
 
           <div className="flex items-center gap-3">
             <Link
-              to="/login"
-              className="rounded-xl px-4 py-2 text-sm font-bold text-emerald-50 transition hover:bg-white/10"
-            >
-              Login
-            </Link>
-
-            <Link
               to="/book/maria-studio"
               className="rounded-full bg-lime-300 px-4 py-2.5 text-sm font-black text-slate-950 shadow-sm transition hover:bg-lime-200"
             >
