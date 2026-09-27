@@ -56,8 +56,6 @@ const growthNav = [
   { label: "Reports", to: "/reports", icon: BarChart3 },
 ];
 
-const footerNav = [{ label: "Settings", to: "/settings", icon: Settings }];
-
 const restrictedForStaff = new Set([
   "Team",
   "Promotions",
