@@ -135,7 +135,7 @@ export function BookingsPage() {
         </h1>
         <button
           onClick={() => setOpen(true)}
-          className="w-full shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 md:w-auto"
+          className=" rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
         >
           + New Booking
         </button>

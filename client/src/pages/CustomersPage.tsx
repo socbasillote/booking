@@ -160,7 +160,7 @@ export function CustomersPage() {
         </div>
         <button
           onClick={() => navigate("/bookings?new=1")}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
         >
           <CalendarPlus size={16} /> Create Booking
         </button>

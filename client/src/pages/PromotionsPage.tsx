@@ -28,7 +28,9 @@ function toDateInput(value?: string) {
 export function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [open, setOpen] = useState(false);
-  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
+  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -37,7 +39,9 @@ export function PromotionsPage() {
       const data = await apiRequest<{ promotions: Promotion[] }>("/promotions");
       setPromotions(data.promotions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load promotions");
+      setError(
+        err instanceof Error ? err.message : "Unable to load promotions",
+      );
     }
   }
 
@@ -54,10 +58,14 @@ export function PromotionsPage() {
     const startsAt = String(form.get("startsAt") ?? "");
     const endsAt = String(form.get("endsAt") ?? "");
     const payload = {
-      code: String(form.get("code") ?? "").trim().toUpperCase(),
+      code: String(form.get("code") ?? "")
+        .trim()
+        .toUpperCase(),
       title: String(form.get("title") ?? "").trim(),
       description: String(form.get("description") ?? "").trim(),
-      discountType: String(form.get("discountType")) as Promotion["discountType"],
+      discountType: String(
+        form.get("discountType"),
+      ) as Promotion["discountType"],
       discountValue: Number(form.get("discountValue")),
       status: String(form.get("status")) as Promotion["status"],
       startsAt: startsAt ? new Date(startsAt).toISOString() : "",
@@ -88,12 +96,17 @@ export function PromotionsPage() {
     setError("");
     setBusy(true);
     try {
-      await apiRequest<{ promotion: Promotion }>(`/promotions/${promotion.id}`, {
-        method: "DELETE",
-      });
+      await apiRequest<{ promotion: Promotion }>(
+        `/promotions/${promotion.id}`,
+        {
+          method: "DELETE",
+        },
+      );
       await loadPromotions();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete promotion");
+      setError(
+        err instanceof Error ? err.message : "Unable to delete promotion",
+      );
     } finally {
       setBusy(false);
     }
@@ -122,7 +135,7 @@ export function PromotionsPage() {
         </div>
         <button
           onClick={openCreateForm}
-          className="w-full shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
+          className="w-full shrink-0 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-800 sm:w-auto"
         >
           + Create Promotion
         </button>
@@ -138,7 +151,9 @@ export function PromotionsPage() {
         {promotions.map((promo) => (
           <div key={promo.id} className="page-card min-w-0 p-5">
             <div className="flex items-start justify-between gap-3">
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[promo.status]}`}>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[promo.status]}`}
+              >
                 {promo.status}
               </span>
               <div className="flex gap-2">
@@ -169,14 +184,22 @@ export function PromotionsPage() {
             <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
               Code: {promo.code || "Not set"}
             </p>
-            <p className="mt-2 min-h-10 text-sm text-slate-500">{promo.description}</p>
+            <p className="mt-2 min-h-10 text-sm text-slate-500">
+              {promo.description}
+            </p>
             <p className="mt-4 text-lg font-semibold text-slate-900">
-              {promo.discountType === "percentage" ? `${promo.discountValue}% off` : `₱${promo.discountValue.toLocaleString()} off`}
+              {promo.discountType === "percentage"
+                ? `${promo.discountValue}% off`
+                : `₱${promo.discountValue.toLocaleString()} off`}
             </p>
             {(promo.startsAt || promo.endsAt) && (
               <p className="mt-2 text-xs text-slate-500">
-                {promo.startsAt ? new Date(promo.startsAt).toLocaleDateString() : "Any date"}
-                {promo.endsAt ? ` - ${new Date(promo.endsAt).toLocaleDateString()}` : ""}
+                {promo.startsAt
+                  ? new Date(promo.startsAt).toLocaleDateString()
+                  : "Any date"}
+                {promo.endsAt
+                  ? ` - ${new Date(promo.endsAt).toLocaleDateString()}`
+                  : ""}
               </p>
             )}
           </div>
