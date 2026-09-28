@@ -42,7 +42,8 @@ export function TeamPage() {
     setBusy(true);
     setError("");
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
 
     try {
       await apiRequest<{ user: TeamMember }>("/team", {
@@ -55,7 +56,7 @@ export function TeamPage() {
       });
 
       setShowForm(false);
-      event.currentTarget.reset();
+  formElement.reset();
 
       const data = await apiRequest<{ users: TeamMember[] }>("/team");
       setTeam(data.users ?? []);
@@ -157,30 +158,74 @@ export function TeamPage() {
           </div>
         </SkeletonLoader>
       ) : (
-        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 2xl:grid-cols-3">
           {team.map((member) => (
-            <div key={member.id} className="page-card min-w-0 p-4 sm:p-5">
-              <div className="flex min-w-0 items-center gap-3">
-                {/* Avatar */}
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white sm:h-12 sm:w-12">
-                  {member.name.slice(0, 1).toUpperCase()}
-                </div>
+            <div
+              key={member.id}
+              className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md"
+            >
+              {/* Brand accent */}
+              <div className="h-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400" />
 
-                {/* Name / role */}
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-slate-900">
-                    {member.name}
+              <div className="p-5">
+                {/* Profile */}
+                <div className="flex min-w-0 items-center gap-4">
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-sm shadow-emerald-100">
+                      {member.name.slice(0, 1).toUpperCase()}
+                    </div>
+
+                    {/* Active indicator */}
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500"
+                      aria-label="Active"
+                    />
                   </div>
 
-                  <div className="text-sm capitalize text-slate-500">
-                    {member.role}
+                  {/* Name / role */}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-base font-bold text-slate-900">
+                      {member.name}
+                    </h3>
+
+                    <span className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold capitalize text-emerald-700">
+                      {member.role}
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Email */}
-              <div className="mt-4 min-w-0 truncate text-sm text-slate-600">
-                {member.email}
+                {/* Divider */}
+                <div className="my-5 border-t border-slate-100" />
+
+                {/* Email */}
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-4 w-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 7.5 12 13l9-5.5M4.5 19.5h15A1.5 1.5 0 0 0 21 18V6a1.5 1.5 0 0 0-1.5-1.5h-15A1.5 1.5 0 0 0 3 6v12a1.5 1.5 0 0 0 1.5 1.5Z"
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                      Email
+                    </p>
+
+                    <p className="truncate text-sm font-medium text-slate-700">
+                      {member.email}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

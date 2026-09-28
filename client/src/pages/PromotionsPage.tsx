@@ -172,61 +172,133 @@ export function PromotionsPage() {
           </div>
         </SkeletonLoader>
       ) : (
-        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {promotions.map((promo) => (
-            <div key={promo.id} className="page-card min-w-0 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[promo.status]}`}
-                >
-                  {promo.status}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openEditForm(promo)}
-                    className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
-                    aria-label={`Edit ${promo.title}`}
-                    title="Edit promotion"
+            <div
+              key={promo.id}
+              className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+            >
+              {/* Top coupon section */}
+              <div className="relative p-5 pb-6">
+                {/* Decorative circles for the perforated edge */}
+                <div className="absolute -bottom-3 -left-3 h-6 w-6 rounded-full bg-slate-50" />
+                <div className="absolute -bottom-3 -right-3 h-6 w-6 rounded-full bg-slate-50" />
+
+                <div className="flex items-start justify-between gap-3">
+                  <span
+                    className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${statusStyles[promo.status]}`}
                   >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removePromotion(promo)}
-                    disabled={busy}
-                    className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                    aria-label={`Delete ${promo.title}`}
-                    title="Delete promotion"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                    {promo.status}
+                  </span>
+
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(promo)}
+                      className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                      aria-label={`Edit ${promo.title}`}
+                      title="Edit promotion"
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void removePromotion(promo)}
+                      disabled={busy}
+                      className="rounded-lg border border-red-100 bg-white p-2 text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      aria-label={`Delete ${promo.title}`}
+                      title="Delete promotion"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Special Offer
+                  </p>
+
+                  <h2 className="mt-1 truncate text-2xl font-extrabold tracking-tight text-slate-900">
+                    {promo.title}
+                  </h2>
+
+                  <p className="mt-2 min-h-10 text-sm leading-5 text-slate-500">
+                    {promo.description}
+                  </p>
+                </div>
+
+                {/* Big discount */}
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-4xl font-black tracking-tight text-emerald-600">
+                      {promo.discountType === "percentage"
+                        ? `${promo.discountValue}%`
+                        : `₱${promo.discountValue.toLocaleString()}`}
+                    </p>
+
+                    <p className="mt-0.5 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                      {promo.discountType === "percentage"
+                        ? "Discount"
+                        : "Amount Off"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-emerald-50 px-3 py-2 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">
+                      Promo Code
+                    </p>
+                    <p className="mt-0.5 font-mono text-sm font-extrabold tracking-wider text-emerald-800">
+                      {promo.code || "NO CODE"}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <h2 className="mt-4 truncate text-xl font-semibold text-slate-900">
-                {promo.title}
-              </h2>
-              <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-                Code: {promo.code || "Not set"}
-              </p>
-              <p className="mt-2 min-h-10 text-sm text-slate-500">
-                {promo.description}
-              </p>
-              <p className="mt-4 text-lg font-semibold text-slate-900">
-                {promo.discountType === "percentage"
-                  ? `${promo.discountValue}% off`
-                  : `₱${promo.discountValue.toLocaleString()} off`}
-              </p>
-              {(promo.startsAt || promo.endsAt) && (
-                <p className="mt-2 text-xs text-slate-500">
-                  {promo.startsAt
-                    ? new Date(promo.startsAt).toLocaleDateString()
-                    : "Any date"}
-                  {promo.endsAt
-                    ? ` - ${new Date(promo.endsAt).toLocaleDateString()}`
-                    : ""}
-                </p>
-              )}
+
+              {/* Perforated divider */}
+              <div className="relative border-t-2 border-dashed border-slate-200">
+                <div className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
+                <div className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
+              </div>
+
+              {/* Coupon footer */}
+              <div className="bg-slate-50/70 px-5 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                      Validity
+                    </p>
+
+                    <p className="mt-1 text-xs font-medium text-slate-600">
+                      {promo.startsAt
+                        ? new Date(promo.startsAt).toLocaleDateString()
+                        : "Any date"}
+                      {promo.endsAt
+                        ? ` — ${new Date(promo.endsAt).toLocaleDateString()}`
+                        : " — No expiry"}
+                    </p>
+                  </div>
+
+                  {/* Barcode-style decoration */}
+                  <div
+                    className="flex h-8 items-stretch gap-[2px] opacity-40"
+                    aria-hidden="true"
+                  >
+                    <span className="w-[2px] bg-slate-700" />
+                    <span className="w-[1px] bg-slate-700" />
+                    <span className="w-[3px] bg-slate-700" />
+                    <span className="w-[1px] bg-slate-700" />
+                    <span className="w-[2px] bg-slate-700" />
+                    <span className="w-[4px] bg-slate-700" />
+                    <span className="w-[1px] bg-slate-700" />
+                    <span className="w-[2px] bg-slate-700" />
+                    <span className="w-[1px] bg-slate-700" />
+                    <span className="w-[3px] bg-slate-700" />
+                    <span className="w-[2px] bg-slate-700" />
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
