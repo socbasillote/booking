@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Promotion = {
   id: string;
@@ -32,6 +33,7 @@ export function PromotionsPage() {
     null,
   );
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   async function loadPromotions() {
@@ -42,6 +44,8 @@ export function PromotionsPage() {
       setError(
         err instanceof Error ? err.message : "Unable to load promotions",
       );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -147,66 +151,82 @@ export function PromotionsPage() {
         </div>
       )}
 
-      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {promotions.map((promo) => (
-          <div key={promo.id} className="page-card min-w-0 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[promo.status]}`}
-              >
-                {promo.status}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => openEditForm(promo)}
-                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
-                  aria-label={`Edit ${promo.title}`}
-                  title="Edit promotion"
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void removePromotion(promo)}
-                  disabled={busy}
-                  className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  aria-label={`Delete ${promo.title}`}
-                  title="Delete promotion"
-                >
-                  <Trash2 size={16} />
-                </button>
+      {loading ? (
+        <SkeletonLoader label="Loading promotions">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }, (_, card) => (
+              <div key={card} className="page-card space-y-4 p-5">
+                <SkeletonBlock className="h-5 w-20 rounded-full" />
+                <SkeletonBlock className="h-6 w-2/3" />
+                <SkeletonBlock className="h-4 w-1/3" />
+                <SkeletonBlock className="h-10 w-full" />
+                <SkeletonBlock className="h-6 w-1/2" />
               </div>
-            </div>
-            <h2 className="mt-4 truncate text-xl font-semibold text-slate-900">
-              {promo.title}
-            </h2>
-            <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-              Code: {promo.code || "Not set"}
-            </p>
-            <p className="mt-2 min-h-10 text-sm text-slate-500">
-              {promo.description}
-            </p>
-            <p className="mt-4 text-lg font-semibold text-slate-900">
-              {promo.discountType === "percentage"
-                ? `${promo.discountValue}% off`
-                : `₱${promo.discountValue.toLocaleString()} off`}
-            </p>
-            {(promo.startsAt || promo.endsAt) && (
-              <p className="mt-2 text-xs text-slate-500">
-                {promo.startsAt
-                  ? new Date(promo.startsAt).toLocaleDateString()
-                  : "Any date"}
-                {promo.endsAt
-                  ? ` - ${new Date(promo.endsAt).toLocaleDateString()}`
-                  : ""}
-              </p>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </SkeletonLoader>
+      ) : (
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {promotions.map((promo) => (
+            <div key={promo.id} className="page-card min-w-0 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[promo.status]}`}
+                >
+                  {promo.status}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditForm(promo)}
+                    className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                    aria-label={`Edit ${promo.title}`}
+                    title="Edit promotion"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removePromotion(promo)}
+                    disabled={busy}
+                    className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    aria-label={`Delete ${promo.title}`}
+                    title="Delete promotion"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <h2 className="mt-4 truncate text-xl font-semibold text-slate-900">
+                {promo.title}
+              </h2>
+              <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+                Code: {promo.code || "Not set"}
+              </p>
+              <p className="mt-2 min-h-10 text-sm text-slate-500">
+                {promo.description}
+              </p>
+              <p className="mt-4 text-lg font-semibold text-slate-900">
+                {promo.discountType === "percentage"
+                  ? `${promo.discountValue}% off`
+                  : `₱${promo.discountValue.toLocaleString()} off`}
+              </p>
+              {(promo.startsAt || promo.endsAt) && (
+                <p className="mt-2 text-xs text-slate-500">
+                  {promo.startsAt
+                    ? new Date(promo.startsAt).toLocaleDateString()
+                    : "Any date"}
+                  {promo.endsAt
+                    ? ` - ${new Date(promo.endsAt).toLocaleDateString()}`
+                    : ""}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-      {!promotions.length && !error && (
+      {!loading && !promotions.length && !error && (
         <div className="page-card p-8 text-center text-sm text-slate-500">
           No promotions yet. Create your first campaign to get started.
         </div>

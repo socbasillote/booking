@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Service = {
   id: string;
@@ -19,6 +20,7 @@ export function ServicesPage() {
   const [open, setOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [currency, setCurrency] = useState("PHP");
 
@@ -32,11 +34,14 @@ export function ServicesPage() {
       setCurrency(data.currency ?? "PHP");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load services");
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadServices();
+    const timer = window.setTimeout(() => void loadServices(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -132,55 +137,71 @@ export function ServicesPage() {
           {error}
         </div>
       )}
-      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {services.map((service) => (
-          <div key={service.id} className="page-card min-w-0 p-5">
-            <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-xl font-semibold text-slate-900">
-                  {service.name}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {service.onlineBookingEnabled === false
-                    ? "Online booking disabled"
-                    : "Online booking enabled"}
-                </p>
+      {loading ? (
+        <SkeletonLoader label="Loading services">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }, (_, card) => (
+              <div key={card} className="page-card space-y-4 p-5">
+                <SkeletonBlock className="h-6 w-2/3" />
+                <SkeletonBlock className="h-4 w-1/2" />
+                <SkeletonBlock className="h-8 w-1/3" />
+                <SkeletonBlock className="h-4 w-1/4" />
+                <SkeletonBlock className="h-8 w-full" />
               </div>
-              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                {service.isActive === false ? "Inactive" : "Active"}
-              </span>
-            </div>
-            <div className="text-2xl font-semibold text-slate-900">
-              {currencyChange(currency)}{" "}
-              {Number(service.price ?? 0).toLocaleString()}
-            </div>
-            <div className="mt-4 text-sm text-slate-600">
-              {service.durationMinutes ?? service.duration ?? 0} minutes
-            </div>
-            <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button
-                type="button"
-                onClick={() => openEditForm(service)}
-                className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
-                aria-label={`Edit ${service.name}`}
-                title="Edit service"
-              >
-                <Pencil size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => void removeService(service)}
-                disabled={busy}
-                className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                aria-label={`Delete ${service.name}`}
-                title="Delete service"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </SkeletonLoader>
+      ) : (
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {services.map((service) => (
+            <div key={service.id} className="page-card min-w-0 p-5">
+              <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-xl font-semibold text-slate-900">
+                    {service.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {service.onlineBookingEnabled === false
+                      ? "Online booking disabled"
+                      : "Online booking enabled"}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                  {service.isActive === false ? "Inactive" : "Active"}
+                </span>
+              </div>
+              <div className="text-2xl font-semibold text-slate-900">
+                {currencyChange(currency)}{" "}
+                {Number(service.price ?? 0).toLocaleString()}
+              </div>
+              <div className="mt-4 text-sm text-slate-600">
+                {service.durationMinutes ?? service.duration ?? 0} minutes
+              </div>
+              <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => openEditForm(service)}
+                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                  aria-label={`Edit ${service.name}`}
+                  title="Edit service"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void removeService(service)}
+                  disabled={busy}
+                  className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  aria-label={`Delete ${service.name}`}
+                  title="Delete service"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {open && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/30 p-4">
           <form

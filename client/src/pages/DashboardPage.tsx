@@ -8,6 +8,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Booking = {
   id: string;
@@ -46,6 +47,7 @@ function formatTime(time: string) {
 export function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => new Date());
 
@@ -67,6 +69,8 @@ export function DashboardPage() {
         setError(
           err instanceof Error ? err.message : "Unable to load dashboard data",
         );
+      } finally {
+        setLoading(false);
       }
     }
     void loadDashboard();
@@ -140,7 +144,15 @@ export function DashboardPage() {
             <UserRoundCheck size={16} />
             In progress
           </div>
-          {currentBooking ? (
+          {loading ? (
+            <SkeletonLoader label="Loading current booking">
+              <div className="mt-3 space-y-2">
+                <SkeletonBlock className="h-6 w-2/3" />
+                <SkeletonBlock className="h-4 w-5/6" />
+                <SkeletonBlock className="h-3 w-1/3" />
+              </div>
+            </SkeletonLoader>
+          ) : currentBooking ? (
             <>
               <p className="mt-3 truncate text-lg font-semibold text-slate-900">
                 {currentBooking.customer}
@@ -166,7 +178,15 @@ export function DashboardPage() {
             <CalendarClock size={16} />
             Next booking
           </div>
-          {nextBooking ? (
+          {loading ? (
+            <SkeletonLoader label="Loading next booking">
+              <div className="mt-3 space-y-2">
+                <SkeletonBlock className="h-6 w-2/3" />
+                <SkeletonBlock className="h-4 w-5/6" />
+                <SkeletonBlock className="h-3 w-1/3" />
+              </div>
+            </SkeletonLoader>
+          ) : nextBooking ? (
             <>
               <p className="mt-3 truncate text-lg font-semibold text-slate-900">
                 {nextBooking.customer}
@@ -189,9 +209,15 @@ export function DashboardPage() {
             <Clock3 size={16} />
             Needs confirmation
           </div>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">
-            {pendingCount}
-          </p>
+          {loading ? (
+            <SkeletonLoader label="Loading pending bookings">
+              <SkeletonBlock className="mt-3 h-9 w-16" />
+            </SkeletonLoader>
+          ) : (
+            <p className="mt-3 text-3xl font-semibold text-slate-900">
+              {pendingCount}
+            </p>
+          )}
           <Link
             to="/bookings?status=Pending"
             className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
@@ -220,45 +246,63 @@ export function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {todayBookings.length === 0 && (
+            {loading ? (
+              <SkeletonLoader label="Loading today's schedule">
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }, (_, row) => (
+                    <div
+                      key={row}
+                      className="flex items-center gap-4 rounded-lg border border-slate-200 p-3"
+                    >
+                      <SkeletonBlock className="h-4 w-16" />
+                      <div className="flex-1 space-y-2">
+                        <SkeletonBlock className="h-4 w-1/3" />
+                        <SkeletonBlock className="h-3 w-1/4" />
+                      </div>
+                      <SkeletonBlock className="h-6 w-20 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </SkeletonLoader>
+            ) : todayBookings.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
                 No bookings scheduled for today.
               </div>
+            ) : (
+              todayBookings.map((booking) => (
+                <div
+                  key={`${booking.time}-${booking.customer}`}
+                  className={`flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between ${currentBooking === booking ? "border-emerald-300 bg-emerald-50/50" : "border-slate-200"}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 shrink-0 text-sm font-semibold text-slate-500">
+                      {formatTime(booking.time)}
+                    </div>
+
+                    <div>
+                      <div className="font-medium text-slate-900">
+                        {booking.customer}
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {booking.service}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 md:justify-end">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                      {booking.staff}
+                    </span>
+
+                    <span
+                      className={`rounded-full px-2.5 py-1 ${booking.status === "Confirmed" ? "bg-emerald-50 text-emerald-700" : booking.status === "Pending" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}
+                    >
+                      {booking.status}
+                    </span>
+                  </div>
+                </div>
+              ))
             )}
-
-            {todayBookings.map((booking) => (
-              <div
-                key={`${booking.time}-${booking.customer}`}
-                className={`flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between ${currentBooking === booking ? "border-emerald-300 bg-emerald-50/50" : "border-slate-200"}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 shrink-0 text-sm font-semibold text-slate-500">
-                    {formatTime(booking.time)}
-                  </div>
-
-                  <div>
-                    <div className="font-medium text-slate-900">
-                      {booking.customer}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {booking.service}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 md:justify-end">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {booking.staff}
-                  </span>
-
-                  <span
-                    className={`rounded-full px-2.5 py-1 ${booking.status === "Confirmed" ? "bg-emerald-50 text-emerald-700" : booking.status === "Pending" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}
-                  >
-                    {booking.status}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Customer = {
   id: string;
@@ -50,6 +51,7 @@ export function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -66,6 +68,8 @@ export function CustomersPage() {
         setError(
           err instanceof Error ? err.message : "Unable to load customers",
         );
+      } finally {
+        setLoading(false);
       }
     }
     void loadCustomers();
@@ -197,10 +201,19 @@ export function CustomersPage() {
                   <p className="text-sm text-slate-500">{label}</p>
                 </div>
 
-                <p className="mt-3 text-3xl font-semibold text-slate-900">
-                  {value}
-                </p>
-                <p className="mt-2 text-xs text-slate-400">{detail}</p>
+                {loading ? (
+                  <>
+                    <SkeletonBlock className="mt-3 h-9 w-16" />
+                    <SkeletonBlock className="mt-2 h-3 w-28" />
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-3 text-3xl font-semibold text-slate-900">
+                      {value}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-400">{detail}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -234,77 +247,94 @@ export function CustomersPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-200 text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                {[
-                  "Customer",
-                  "Contact",
-                  "Bookings",
-                  "Last booking",
-                  "Total spent",
-                  "Status",
-                  "",
-                ].map((heading) => (
-                  <th key={heading} className="px-5 py-3 font-medium">
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  onClick={() => setSelectedCustomer(customer)}
-                  className="cursor-pointer border-t border-slate-100 transition hover:bg-slate-50"
+        {loading ? (
+          <SkeletonLoader label="Loading customers">
+            <div className="space-y-4 p-5">
+              {Array.from({ length: 5 }, (_, row) => (
+                <div
+                  key={row}
+                  className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-4 sm:grid-cols-6"
                 >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                        {initials(customer.name)}
-                      </div>
-                      <span className="font-medium text-slate-900">
-                        {customer.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-slate-500">
-                    <div>{customer.email ?? "No email"}</div>
-                    <div className="text-xs">
-                      {customer.phone ?? "No phone"}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 font-medium text-slate-700">
-                    {customer.bookings.length}
-                  </td>
-                  <td className="px-5 py-4 text-slate-500">
-                    {formatDate(customer.lastBooking?.date)}
-                  </td>
-                  <td className="px-5 py-4 font-medium text-slate-900">
-                    ₱{customer.totalSpent.toLocaleString()}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${(customer.status ?? "active") === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
-                    >
-                      {customer.status ?? "active"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-right text-slate-400">
-                    <ChevronRight size={17} />
-                  </td>
-                </tr>
+                  {Array.from({ length: 6 }, (_, cell) => (
+                    <SkeletonBlock key={cell} className="h-5" />
+                  ))}
+                </div>
               ))}
-            </tbody>
-          </table>
-          {filteredCustomers.length === 0 && (
-            <div className="p-10 text-center text-sm text-slate-500">
-              No customers match your search.
             </div>
-          )}
-        </div>
+          </SkeletonLoader>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-200 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  {[
+                    "Customer",
+                    "Contact",
+                    "Bookings",
+                    "Last booking",
+                    "Total spent",
+                    "Status",
+                    "",
+                  ].map((heading) => (
+                    <th key={heading} className="px-5 py-3 font-medium">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    onClick={() => setSelectedCustomer(customer)}
+                    className="cursor-pointer border-t border-slate-100 transition hover:bg-slate-50"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                          {initials(customer.name)}
+                        </div>
+                        <span className="font-medium text-slate-900">
+                          {customer.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">
+                      <div>{customer.email ?? "No email"}</div>
+                      <div className="text-xs">
+                        {customer.phone ?? "No phone"}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 font-medium text-slate-700">
+                      {customer.bookings.length}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">
+                      {formatDate(customer.lastBooking?.date)}
+                    </td>
+                    <td className="px-5 py-4 font-medium text-slate-900">
+                      ₱{customer.totalSpent.toLocaleString()}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${(customer.status ?? "active") === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        {customer.status ?? "active"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right text-slate-400">
+                      <ChevronRight size={17} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredCustomers.length === 0 && (
+              <div className="p-10 text-center text-sm text-slate-500">
+                No customers match your search.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {selectedCustomer && (

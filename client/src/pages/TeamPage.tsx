@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type TeamMember = {
   id: string;
@@ -10,6 +11,7 @@ type TeamMember = {
 
 export function TeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -21,6 +23,8 @@ export function TeamPage() {
         setTeam(data.users ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load team");
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -129,34 +133,53 @@ export function TeamPage() {
       )}
 
       {/* Team */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-        {team.map((member) => (
-          <div key={member.id} className="page-card min-w-0 p-4 sm:p-5">
-            <div className="flex min-w-0 items-center gap-3">
-              {/* Avatar */}
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white sm:h-12 sm:w-12">
-                {member.name.slice(0, 1).toUpperCase()}
-              </div>
-
-              {/* Name / role */}
-              <div className="min-w-0">
-                <div className="truncate font-semibold text-slate-900">
-                  {member.name}
+      {loading ? (
+        <SkeletonLoader label="Loading team members">
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            {Array.from({ length: 6 }, (_, card) => (
+              <div key={card} className="page-card space-y-4 p-5">
+                <div className="flex items-center gap-3">
+                  <SkeletonBlock className="h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <SkeletonBlock className="h-4 w-2/3" />
+                    <SkeletonBlock className="h-3 w-1/3" />
+                  </div>
                 </div>
-
-                <div className="text-sm capitalize text-slate-500">
-                  {member.role}
-                </div>
+                <SkeletonBlock className="h-4 w-3/4" />
               </div>
-            </div>
-
-            {/* Email */}
-            <div className="mt-4 min-w-0 truncate text-sm text-slate-600">
-              {member.email}
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </SkeletonLoader>
+      ) : (
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+          {team.map((member) => (
+            <div key={member.id} className="page-card min-w-0 p-4 sm:p-5">
+              <div className="flex min-w-0 items-center gap-3">
+                {/* Avatar */}
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white sm:h-12 sm:w-12">
+                  {member.name.slice(0, 1).toUpperCase()}
+                </div>
+
+                {/* Name / role */}
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-slate-900">
+                    {member.name}
+                  </div>
+
+                  <div className="text-sm capitalize text-slate-500">
+                    {member.role}
+                  </div>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="mt-4 min-w-0 truncate text-sm text-slate-600">
+                {member.email}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

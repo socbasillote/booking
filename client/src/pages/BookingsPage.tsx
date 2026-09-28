@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Service = {
   id: string;
@@ -48,6 +49,7 @@ export function BookingsPage() {
   );
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -67,11 +69,14 @@ export function BookingsPage() {
       setServices(serviceData.services ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load bookings");
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadData();
+    const timer = window.setTimeout(() => void loadData(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -202,94 +207,111 @@ export function BookingsPage() {
             </button>
           )}
         </div>
-        <div className="table-shell">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                {[
-                  "Customer",
-                  "Service",
-                  "Staff",
-                  "Date & Time",
-                  "Status",
-                  "Payment",
-                ].map((heading) => (
-                  <th key={heading} className="px-4 py-3 font-medium">
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => (
-                <tr key={row.id} className="border-t border-slate-200">
-                  <td className="px-4 py-3 font-medium text-slate-900">
-                    {row.customer}
-                    <div className="text-xs font-normal text-slate-500">
-                      {row.email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{row.service}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.staff}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {row.date} · {row.time}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-block h-2.5 w-2.5 rounded-full ${
-                          row.status === "Rejected"
-                            ? "bg-red-500"
-                            : row.status === "Confirmed"
-                              ? "bg-emerald-500"
-                              : row.status === "Completed"
-                                ? "bg-blue-500"
-                                : "bg-amber-500"
-                        }`}
-                      />
+        {loading ? (
+          <SkeletonLoader label="Loading bookings">
+            <div className="space-y-3 p-4" aria-hidden="true">
+              {Array.from({ length: 5 }, (_, row) => (
+                <div
+                  key={row}
+                  className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-3 sm:grid-cols-6"
+                >
+                  {Array.from({ length: 6 }, (_, cell) => (
+                    <SkeletonBlock key={cell} className="h-5" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </SkeletonLoader>
+        ) : (
+          <div className="table-shell">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  {[
+                    "Customer",
+                    "Service",
+                    "Staff",
+                    "Date & Time",
+                    "Status",
+                    "Payment",
+                  ].map((heading) => (
+                    <th key={heading} className="px-4 py-3 font-medium">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => (
+                  <tr key={row.id} className="border-t border-slate-200">
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {row.customer}
+                      <div className="text-xs font-normal text-slate-500">
+                        {row.email}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{row.service}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.staff}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {row.date} · {row.time}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block h-2.5 w-2.5 rounded-full ${
+                            row.status === "Rejected"
+                              ? "bg-red-500"
+                              : row.status === "Confirmed"
+                                ? "bg-emerald-500"
+                                : row.status === "Completed"
+                                  ? "bg-blue-500"
+                                  : "bg-amber-500"
+                          }`}
+                        />
+                        <select
+                          value={row.status}
+                          onChange={(event) =>
+                            patchBooking(row.id, {
+                              status: event.target.value as Booking["status"],
+                            })
+                          }
+                          className={`rounded-lg border px-2 py-1 text-xs ${
+                            row.status === "Rejected"
+                              ? "border-red-200 bg-red-50 text-red-700"
+                              : "border-slate-200 bg-white text-slate-700"
+                          }`}
+                        >
+                          <option>Pending</option>
+                          <option>Confirmed</option>
+                          <option>Completed</option>
+                          <option>Rejected</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       <select
-                        value={row.status}
+                        value={row.payment}
                         onChange={(event) =>
                           patchBooking(row.id, {
-                            status: event.target.value as Booking["status"],
+                            payment: event.target.value as Booking["payment"],
                           })
                         }
-                        className={`rounded-lg border px-2 py-1 text-xs ${
-                          row.status === "Rejected"
-                            ? "border-red-200 bg-red-50 text-red-700"
-                            : "border-slate-200 bg-white text-slate-700"
-                        }`}
+                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
                       >
-                        <option>Pending</option>
-                        <option>Confirmed</option>
-                        <option>Completed</option>
-                        <option>Rejected</option>
+                        <option>Unpaid</option>
+                        <option>Deposit</option>
+                        <option>Paid</option>
                       </select>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={row.payment}
-                      onChange={(event) =>
-                        patchBooking(row.id, {
-                          payment: event.target.value as Booking["payment"],
-                        })
-                      }
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
-                    >
-                      <option>Unpaid</option>
-                      <option>Deposit</option>
-                      <option>Paid</option>
-                    </select>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {row.paymentMethod}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {row.paymentMethod}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       {open && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/30 p-4">

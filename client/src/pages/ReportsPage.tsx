@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { apiRequest } from "../lib/api";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Booking = {
   id?: string;
@@ -175,9 +176,30 @@ export function ReportsPage() {
         </div>
       )}
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          Loading reports...
-        </div>
+        <SkeletonLoader label="Loading reports">
+          <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }, (_, card) => (
+                <div
+                  key={card}
+                  className="space-y-3 rounded-xl border border-slate-200 bg-white p-4"
+                >
+                  <SkeletonBlock className="h-4 w-2/3" />
+                  <SkeletonBlock className="h-8 w-1/2" />
+                </div>
+              ))}
+            </div>
+            {Array.from({ length: 2 }, (_, chart) => (
+              <div
+                key={chart}
+                className="space-y-4 rounded-xl border border-slate-200 bg-white p-5"
+              >
+                <SkeletonBlock className="h-5 w-1/3" />
+                <SkeletonBlock className="h-56 w-full" />
+              </div>
+            ))}
+          </div>
+        </SkeletonLoader>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 text-sm">

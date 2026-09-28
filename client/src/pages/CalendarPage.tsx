@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ChevronLeft, ChevronRight, Clock3, Plus, X } from "lucide-react";
 import { apiRequest } from "../lib/api";
 import { addBookingNotification } from "../lib/notifications";
+import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Booking = {
   id: string;
@@ -77,6 +78,7 @@ export function CalendarPage() {
   const [courtCount, setCourtCount] = useState(3);
   const [blocked, setBlocked] = useState<string[]>([]);
   const [hours, setHours] = useState(defaultHours);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -140,6 +142,8 @@ export function CalendarPage() {
         setError(
           err instanceof Error ? err.message : "Unable to load calendar",
         );
+      } finally {
+        setLoading(false);
       }
     }
     void load();
@@ -239,269 +243,309 @@ export function CalendarPage() {
         </div>
       )}
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-xl bg-slate-100 p-1">
-              {(["week", "month"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => {
-                    setView(item);
-                    setSelectedDate(keyOf(today));
-                    setAnchor(
-                      item === "week"
-                        ? mondayOf(today)
-                        : new Date(today.getFullYear(), today.getMonth(), 1),
-                    );
-                  }}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize ${view === item ? "bg-white text-emerald-800 shadow-sm" : "text-slate-500"}`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={todayClick}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
-            >
-              Today
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex">
-              <button
-                type="button"
-                aria-label="Previous period"
-                onClick={() => move(-1)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                type="button"
-                aria-label="Next period"
-                onClick={() => move(1)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-            <h2 className="text-base font-bold text-slate-900">{heading}</h2>
-          </div>
-        </div>
-        {view === "week" ? (
-          <div className="w-full overflow-x-auto">
-            <div className="w-full min-w-[1100px]">
-              <div
-                className="grid border-b border-slate-200 bg-slate-50"
-                style={{
-                  gridTemplateColumns: `72px repeat(${week.length}, minmax(0, 1fr))`,
-                }}
-              >
-                <div className="row-span-2 font-bold border-r border-slate-200 flex items-center justify-center">
-                  Time
-                </div>
-
-                {week.map((date, i) => (
+        {loading ? (
+          <SkeletonLoader label="Loading calendar">
+            <div className="space-y-4 p-4 sm:p-5">
+              <div className="flex gap-2">
+                <SkeletonBlock className="h-9 w-24" />
+                <SkeletonBlock className="h-9 w-20" />
+                <SkeletonBlock className="ml-auto h-9 w-40" />
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 7 }, (_, day) => (
                   <div
-                    key={keyOf(date)}
-                    className="border-r border-slate-200 text-center"
+                    key={day}
+                    className="space-y-2 rounded-lg border border-slate-200 p-2"
                   >
-                    <div className="p-3">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        {days[i]}
-                      </div>
-                      <div
-                        className={`mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-900"}`}
-                      >
-                        {date.getDate()}
-                      </div>
-                    </div>
-                    <div
-                      className="grid border-t border-slate-200"
-                      style={{
-                        gridTemplateColumns: `repeat(${courts.length}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {courts.map((court) => (
-                        <div
-                          key={`${keyOf(date)}-${court}`}
-                          className={`border-r border-slate-200 py-2 text-center text-[10px] font-bold uppercase last:border-r-0 ${blocked.includes(court) ? "text-slate-400" : "text-slate-500"}`}
-                        >
-                          {court.replace("Court ", "C")}
-                        </div>
-                      ))}
-                    </div>
+                    <SkeletonBlock className="h-4 w-1/2" />
+                    <SkeletonBlock className="h-8 w-8 rounded-full" />
+                    <SkeletonBlock className="h-20 w-full" />
                   </div>
                 ))}
               </div>
-              <div
-                className="grid"
-                style={{
-                  gridTemplateColumns: `72px repeat(${week.length * courts.length}, minmax(0, 1fr))`,
-                }}
-              >
-                {hours.map((hour) => (
-                  <div key={hour} className="contents">
-                    <div className="border-r border-b border-slate-100 px-2 py-4 text-right text-[11px] font-semibold text-slate-400">
-                      {hourLabel(hour)}
-                    </div>
-                    {week.flatMap((date) =>
-                      courts.map((court) => {
-                        const dateKey = keyOf(date);
-                        const booking = find(
-                          dateKey,
-                          court,
-                          `${String(hour).padStart(2, "0")}:00`,
-                        )[0];
-                        const unavailable = blocked.includes(court);
-                        return (
-                          <div
-                            key={`${dateKey}-${court}-${hour}`}
-                            className={`min-h-[60px] border-r border-b border-slate-100 p-1 ${unavailable ? "bg-slate-50" : "hover:bg-emerald-50/40"}`}
-                          >
-                            {unavailable ? (
-                              <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase text-slate-300">
-                                Blocked
-                              </div>
-                            ) : booking ? (
-                              <button
-                                type="button"
-                                onClick={() => setDetail(booking)}
-                                className={`h-full w-full rounded-lg border p-2 text-left text-[11px] ${bookingTone(booking.status)}`}
-                              >
-                                <strong className="block truncate">
-                                  {booking.customer}
-                                </strong>
-                                <span className="block truncate opacity-80">
-                                  {booking.service}
-                                </span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                aria-label={`New booking ${dateKey} ${hourLabel(hour)} ${court}`}
-                                onClick={() =>
-                                  openForm(
-                                    dateKey,
-                                    `${String(hour).padStart(2, "0")}:00`,
-                                    court,
-                                  )
-                                }
-                                className="h-full min-h-[52px] w-full rounded-lg"
-                              />
-                            )}
-                          </div>
-                        );
-                      }),
-                    )}
-                  </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {Array.from({ length: 4 }, (_, court) => (
+                  <SkeletonBlock key={court} className="h-8" />
                 ))}
               </div>
             </div>
-          </div>
+          </SkeletonLoader>
         ) : (
-          <div className="p-4 sm:p-5">
-            <div className="grid grid-cols-7 border-l border-t border-slate-200">
-              {days.map((day) => (
-                <div
-                  key={day}
-                  className="border-r border-b border-slate-200 bg-slate-50 py-2 text-center text-[11px] font-bold uppercase text-slate-500"
-                >
-                  {day}
+          <>
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-xl bg-slate-100 p-1">
+                  {(["week", "month"] as const).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        setView(item);
+                        setSelectedDate(keyOf(today));
+                        setAnchor(
+                          item === "week"
+                            ? mondayOf(today)
+                            : new Date(
+                                today.getFullYear(),
+                                today.getMonth(),
+                                1,
+                              ),
+                        );
+                      }}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize ${view === item ? "bg-white text-emerald-800 shadow-sm" : "text-slate-500"}`}
+                    >
+                      {item}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              {cells.map((date, i) =>
-                !date ? (
-                  <div
-                    key={`blank-${i}`}
-                    className="min-h-24 border-r border-b border-slate-200 bg-slate-50/50"
-                  />
-                ) : (
+                <button
+                  type="button"
+                  onClick={todayClick}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
+                >
+                  Today
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex">
                   <button
                     type="button"
-                    key={keyOf(date)}
-                    onClick={() => setSelectedDate(keyOf(date))}
-                    className={`min-h-24 border-r border-b border-slate-200 p-2 text-left ${selectedDate === keyOf(date) ? "bg-emerald-50 ring-2 ring-inset ring-emerald-600" : "bg-white"}`}
+                    aria-label="Previous period"
+                    onClick={() => move(-1)}
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
                   >
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-700"}`}
-                    >
-                      {date.getDate()}
-                    </span>
-                    <div className="mt-2 flex gap-1">
-                      {find(keyOf(date))
-                        .slice(0, 5)
-                        .map((booking) => (
-                          <span
-                            key={booking.id}
-                            className={`h-2 w-2 rounded-full ${booking.status === "Confirmed" ? "bg-emerald-600" : booking.status === "Completed" ? "bg-sky-500" : "bg-amber-500"}`}
-                          />
-                        ))}
-                    </div>
+                    <ChevronLeft size={18} />
                   </button>
-                ),
-              )}
-            </div>
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                    Selected date
-                  </p>
-                  <h3 className="mt-1 font-bold text-slate-900">
-                    {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(
-                      "en-US",
-                      { weekday: "long", month: "long", day: "numeric" },
-                    )}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openForm(selectedDate)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white"
-                >
-                  <Plus size={14} /> Add booking
-                </button>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {courts.map((court) => (
-                  <div
-                    key={court}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                  <button
+                    type="button"
+                    aria-label="Next period"
+                    onClick={() => move(1)}
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
                   >
-                    <div className="flex justify-between text-sm font-semibold text-slate-700">
-                      <span>{court}</span>
-                      <span
-                        className={`text-xs ${blocked.includes(court) ? "text-slate-400" : "text-emerald-700"}`}
-                      >
-                        {blocked.includes(court)
-                          ? "Unavailable"
-                          : `${find(selectedDate, court).length} booked`}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {heading}
+                </h2>
               </div>
             </div>
-          </div>
+            {view === "week" ? (
+              <div className="w-full overflow-x-auto">
+                <div className="w-full min-w-[1100px]">
+                  <div
+                    className="grid border-b border-slate-200 bg-slate-50"
+                    style={{
+                      gridTemplateColumns: `72px repeat(${week.length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    <div className="row-span-2 font-bold border-r border-slate-200 flex items-center justify-center">
+                      Time
+                    </div>
+
+                    {week.map((date, i) => (
+                      <div
+                        key={keyOf(date)}
+                        className="border-r border-slate-200 text-center"
+                      >
+                        <div className="p-3">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            {days[i]}
+                          </div>
+                          <div
+                            className={`mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-900"}`}
+                          >
+                            {date.getDate()}
+                          </div>
+                        </div>
+                        <div
+                          className="grid border-t border-slate-200"
+                          style={{
+                            gridTemplateColumns: `repeat(${courts.length}, minmax(0, 1fr))`,
+                          }}
+                        >
+                          {courts.map((court) => (
+                            <div
+                              key={`${keyOf(date)}-${court}`}
+                              className={`border-r border-slate-200 py-2 text-center text-[10px] font-bold uppercase last:border-r-0 ${blocked.includes(court) ? "text-slate-400" : "text-slate-500"}`}
+                            >
+                              {court.replace("Court ", "C")}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: `72px repeat(${week.length * courts.length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {hours.map((hour) => (
+                      <div key={hour} className="contents">
+                        <div className="border-r border-b border-slate-100 px-2 py-4 text-right text-[11px] font-semibold text-slate-400">
+                          {hourLabel(hour)}
+                        </div>
+                        {week.flatMap((date) =>
+                          courts.map((court) => {
+                            const dateKey = keyOf(date);
+                            const booking = find(
+                              dateKey,
+                              court,
+                              `${String(hour).padStart(2, "0")}:00`,
+                            )[0];
+                            const unavailable = blocked.includes(court);
+                            return (
+                              <div
+                                key={`${dateKey}-${court}-${hour}`}
+                                className={`min-h-[60px] border-r border-b border-slate-100 p-1 ${unavailable ? "bg-slate-50" : "hover:bg-emerald-50/40"}`}
+                              >
+                                {unavailable ? (
+                                  <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase text-slate-300">
+                                    Blocked
+                                  </div>
+                                ) : booking ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDetail(booking)}
+                                    className={`h-full w-full rounded-lg border p-2 text-left text-[11px] ${bookingTone(booking.status)}`}
+                                  >
+                                    <strong className="block truncate">
+                                      {booking.customer}
+                                    </strong>
+                                    <span className="block truncate opacity-80">
+                                      {booking.service}
+                                    </span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    aria-label={`New booking ${dateKey} ${hourLabel(hour)} ${court}`}
+                                    onClick={() =>
+                                      openForm(
+                                        dateKey,
+                                        `${String(hour).padStart(2, "0")}:00`,
+                                        court,
+                                      )
+                                    }
+                                    className="h-full min-h-[52px] w-full rounded-lg"
+                                  />
+                                )}
+                              </div>
+                            );
+                          }),
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-7 border-l border-t border-slate-200">
+                  {days.map((day) => (
+                    <div
+                      key={day}
+                      className="border-r border-b border-slate-200 bg-slate-50 py-2 text-center text-[11px] font-bold uppercase text-slate-500"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                  {cells.map((date, i) =>
+                    !date ? (
+                      <div
+                        key={`blank-${i}`}
+                        className="min-h-24 border-r border-b border-slate-200 bg-slate-50/50"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        key={keyOf(date)}
+                        onClick={() => setSelectedDate(keyOf(date))}
+                        className={`min-h-24 border-r border-b border-slate-200 p-2 text-left ${selectedDate === keyOf(date) ? "bg-emerald-50 ring-2 ring-inset ring-emerald-600" : "bg-white"}`}
+                      >
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-700"}`}
+                        >
+                          {date.getDate()}
+                        </span>
+                        <div className="mt-2 flex gap-1">
+                          {find(keyOf(date))
+                            .slice(0, 5)
+                            .map((booking) => (
+                              <span
+                                key={booking.id}
+                                className={`h-2 w-2 rounded-full ${booking.status === "Confirmed" ? "bg-emerald-600" : booking.status === "Completed" ? "bg-sky-500" : "bg-amber-500"}`}
+                              />
+                            ))}
+                        </div>
+                      </button>
+                    ),
+                  )}
+                </div>
+                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                        Selected date
+                      </p>
+                      <h3 className="mt-1 font-bold text-slate-900">
+                        {new Date(
+                          `${selectedDate}T12:00:00`,
+                        ).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openForm(selectedDate)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white"
+                    >
+                      <Plus size={14} /> Add booking
+                    </button>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {courts.map((court) => (
+                      <div
+                        key={court}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                      >
+                        <div className="flex justify-between text-sm font-semibold text-slate-700">
+                          <span>{court}</span>
+                          <span
+                            className={`text-xs ${blocked.includes(court) ? "text-slate-400" : "text-emerald-700"}`}
+                          >
+                            {blocked.includes(court)
+                              ? "Unavailable"
+                              : `${find(selectedDate, court).length} booked`}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-4 border-t border-slate-100 px-4 py-3 text-xs font-semibold text-slate-500">
+              <span>
+                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                Available
+              </span>
+              <span>
+                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
+                Pending
+              </span>
+              <span>
+                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-slate-300" />
+                Unavailable
+              </span>
+            </div>
+          </>
         )}
-        <div className="flex gap-4 border-t border-slate-100 px-4 py-3 text-xs font-semibold text-slate-500">
-          <span>
-            <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            Available
-          </span>
-          <span>
-            <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
-            Pending
-          </span>
-          <span>
-            <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-slate-300" />
-            Unavailable
-          </span>
-        </div>
       </section>
       {detail && (
         <div
