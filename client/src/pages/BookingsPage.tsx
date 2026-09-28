@@ -137,9 +137,7 @@ export function BookingsPage() {
     updateSequence.current.set(operationKey, sequence);
     setError("");
     setBookings((current) =>
-      current.map((row) =>
-        row.id === id ? { ...row, [field]: value } : row,
-      ),
+      current.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
     );
 
     try {
@@ -150,9 +148,7 @@ export function BookingsPage() {
       if (updateSequence.current.get(operationKey) === sequence) {
         setBookings((current) =>
           current.map((row) =>
-            row.id === id
-              ? { ...row, [field]: result.booking[field] }
-              : row,
+            row.id === id ? { ...row, [field]: result.booking[field] } : row,
           ),
         );
       }

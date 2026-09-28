@@ -53,6 +53,7 @@ export function SettingsPage() {
           setBusinessName(saved.name);
           setBusinessSlug(saved.slug);
           setCurrency(saved.currency ?? "PHP");
+          dispatch(updateUser({ businessName: saved.name }));
         }
       } catch (err) {
         setProfileStatus(
@@ -61,7 +62,7 @@ export function SettingsPage() {
       }
     }
     void loadSettings();
-  }, []);
+  }, [dispatch]);
 
   async function saveBusinessProfile() {
     if (!business) return;
@@ -94,6 +95,7 @@ export function SettingsPage() {
         setCurrency(response.business.currency ?? "PHP");
         dispatch(
           updateUser({
+            businessName: response.business.name,
             businessSlug: response.business.slug,
             onboardingComplete: true,
           }),
@@ -151,6 +153,7 @@ export function SettingsPage() {
         setCurrency(response.business.currency ?? "PHP");
         dispatch(
           updateUser({
+            businessName: response.business.name,
             businessSlug: response.business.slug,
             onboardingComplete: true,
           }),

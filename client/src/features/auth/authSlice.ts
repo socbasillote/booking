@@ -6,6 +6,7 @@ export type User = {
   name: string;
   email: string;
   role: "owner" | "admin" | "staff";
+  businessName?: string;
   businessSlug?: string;
   onboardingComplete?: boolean;
 };

@@ -27,7 +27,8 @@ import {
   Megaphone,
   X,
 } from "lucide-react";
-import { logout } from "../features/auth/authSlice";
+import { logout, updateUser } from "../features/auth/authSlice";
+import { apiRequestWithCache } from "../lib/api";
 import type { RootState } from "../store/store";
 import {
   activateBookingNotifications,
@@ -136,7 +137,9 @@ export function Layout({ children }: { children: ReactNode }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
+  const userId = user?.id;
   const isStaff = user?.role === "staff";
+  const businessName = user?.businessName || "Westmont";
   const profileKey = `sidebooking_profile_${user?.id ?? "current"}`;
   const [profile, setProfile] = useState<LocalProfile>(() =>
     getLocalProfile(profileKey, user?.name ?? "Alicia", user?.email ?? ""),
@@ -146,6 +149,24 @@ export function Layout({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] =
     useState<BookingNotification[]>(getNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    void apiRequestWithCache<{ business?: { name?: string } | null }>(
+      "/business",
+      (data) => {
+        if (data.business?.name) {
+          dispatch(updateUser({ businessName: data.business.name }));
+        }
+      },
+    )
+      .then((data) => {
+        if (data.business?.name) {
+          dispatch(updateUser({ businessName: data.business.name }));
+        }
+      })
+      .catch(() => undefined);
+  }, [dispatch, userId]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
@@ -197,7 +218,7 @@ export function Layout({ children }: { children: ReactNode }) {
         >
           {!isCollapsed && (
             <div>
-              <div className="mt-1 text-lg font-semibold">Maria Studio</div>
+              <div className="mt-1 text-lg font-semibold">{businessName}</div>
             </div>
           )}
 
