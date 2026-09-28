@@ -125,22 +125,26 @@ export function CalendarPage() {
     async function load() {
       try {
         const [bookingData, settingsData] = await Promise.all([
-          apiRequestWithCache<{ bookings: Booking[] }>(
-            "/bookings",
-            (data) => {
-              setBookings((data.bookings ?? []).map(normalize));
-              setLoading(false);
-            },
-          ),
+          apiRequestWithCache<{ bookings: Booking[] }>("/bookings", (data) => {
+            setBookings((data.bookings ?? []).map(normalize));
+            setLoading(false);
+          }),
           apiRequestWithCache<Settings>("/business", (data) => {
             const business = data.business;
             setCourtCount(Math.max(1, Number(business?.courtsCount ?? 3)));
             setBlocked(business?.disabledCourts ?? []);
-            const opening = Number((business?.openHour ?? "08:00").split(":")[0]);
-            const closing = Number((business?.closeHour ?? "20:00").split(":")[0]);
+            const opening = Number(
+              (business?.openHour ?? "08:00").split(":")[0],
+            );
+            const closing = Number(
+              (business?.closeHour ?? "20:00").split(":")[0],
+            );
             if (closing > opening)
               setHours(
-                Array.from({ length: closing - opening }, (_, i) => opening + i),
+                Array.from(
+                  { length: closing - opening },
+                  (_, i) => opening + i,
+                ),
               );
             setLoading(false);
           }),

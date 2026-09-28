@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
@@ -52,6 +52,7 @@ export function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const updateSequence = useRef(new Map<string, number>());
 
   async function loadData() {
     try {
@@ -122,14 +123,47 @@ export function BookingsPage() {
     }
   }
 
-  async function patchBooking(id: string, patch: Partial<Booking>) {
+  async function patchBooking<K extends "status" | "payment">(
+    id: string,
+    field: K,
+    value: Booking[K],
+  ) {
+    const booking = bookings.find((row) => row.id === id);
+    if (!booking) return;
+
+    const previousValue = booking[field];
+    const operationKey = `${id}:${field}`;
+    const sequence = (updateSequence.current.get(operationKey) ?? 0) + 1;
+    updateSequence.current.set(operationKey, sequence);
+    setError("");
+    setBookings((current) =>
+      current.map((row) =>
+        row.id === id ? { ...row, [field]: value } : row,
+      ),
+    );
+
     try {
-      await apiRequest<{ booking: Booking }>(`/bookings/${id}`, {
+      const result = await apiRequest<{ booking: Booking }>(`/bookings/${id}`, {
         method: "PATCH",
-        body: JSON.stringify(patch),
+        body: JSON.stringify({ [field]: value }),
       });
-      await loadData();
+      if (updateSequence.current.get(operationKey) === sequence) {
+        setBookings((current) =>
+          current.map((row) =>
+            row.id === id
+              ? { ...row, [field]: result.booking[field] }
+              : row,
+          ),
+        );
+      }
     } catch (err) {
+      if (updateSequence.current.get(operationKey) === sequence) {
+        setBookings((current) =>
+          current.map((row) =>
+            row.id === id ? { ...row, [field]: previousValue } : row,
+          ),
+        );
+      }
       setError(err instanceof Error ? err.message : "Unable to update booking");
     }
   }
@@ -283,9 +317,11 @@ export function BookingsPage() {
                         <select
                           value={row.status}
                           onChange={(event) =>
-                            patchBooking(row.id, {
-                              status: event.target.value as Booking["status"],
-                            })
+                            void patchBooking(
+                              row.id,
+                              "status",
+                              event.target.value as Booking["status"],
+                            )
                           }
                           className={`rounded-lg border px-2 py-1 text-xs ${
                             row.status === "Rejected"
@@ -304,9 +340,11 @@ export function BookingsPage() {
                       <select
                         value={row.payment}
                         onChange={(event) =>
-                          patchBooking(row.id, {
-                            payment: event.target.value as Booking["payment"],
-                          })
+                          void patchBooking(
+                            row.id,
+                            "payment",
+                            event.target.value as Booking["payment"],
+                          )
                         }
                         className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
                       >
