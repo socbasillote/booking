@@ -102,7 +102,7 @@ function ClubPage() {
             </p>
 
             <Link
-              to="/book/maria-studio"
+              to="/book/westmont"
               className="inline-flex rounded-2xl bg-[#183f2e] px-7 py-4 text-sm font-black text-white transition hover:bg-emerald-900"
             >
               Book a Court

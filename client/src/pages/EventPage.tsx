@@ -99,7 +99,7 @@ function EventPage() {
           </div>
 
           <Link
-            to="/book/maria-studio"
+            to="/book/westmont"
             className="w-fit rounded-2xl bg-[#183f2e] px-7 py-4 text-sm font-black text-white transition hover:bg-emerald-900"
           >
             Reserve Your Court

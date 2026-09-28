@@ -33,7 +33,7 @@ For local development, copy `.env.example` to `.env` in `server` and start Mongo
 
 Health check: `GET /api/health`.
 
-Customer booking pages use `/book/:slug` (for example `/book/maria-studio`). After a customer submits a booking, Sidebooking creates a confirmation code and QR image. Configure the `SMTP_*` variables in `.env` to email the QR code automatically. If SMTP is omitted during development, the API still returns the QR image and logs the confirmation code.
+Customer booking pages use `/book/:slug` (for example `/book/westmont`). After a customer submits a booking, Sidebooking creates a confirmation code and QR image. Configure the `SMTP_*` variables in `.env` to email the QR code automatically. If SMTP is omitted during development, the API still returns the QR image and logs the confirmation code.
 
 PayMongo checkout is available as the `PayMongo` payment method on public bookings. Set `PAYMONGO_SECRET_KEY` and `PAYMONGO_WEBHOOK_SECRET` in `server/.env`, then configure this webhook URL in PayMongo:
 

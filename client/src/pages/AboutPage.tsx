@@ -89,7 +89,7 @@ function AboutPage() {
           </h2>
 
           <Link
-            to="/book/maria-studio"
+            to="/book/westmont"
             className="mt-10 inline-flex rounded-2xl bg-[#183f2e] px-8 py-4 text-sm font-black text-white transition hover:bg-emerald-900"
           >
             Book a Court

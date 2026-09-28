@@ -123,7 +123,7 @@ export function HomePage() {
               Club login
             </Link>
             <Link
-              to="/book/maria-studio"
+              to="/book/westmont"
               className="rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-black text-slate-950 shadow-sm transition hover:bg-lime-200"
             >
               Book a court
@@ -158,7 +158,7 @@ export function HomePage() {
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link
-                  to="/book/maria-studio"
+                  to="/book/westmont"
                   className="rounded-2xl bg-lime-300 px-7 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-lime-200"
                 >
                   Book a court
@@ -318,7 +318,7 @@ export function HomePage() {
               </h2>
             </div>
             <Link
-              to="/book/maria-studio"
+              to="/book/westmont"
               className="rounded-2xl border border-emerald-900/20 bg-white px-6 py-3 text-sm font-black text-slate-900 transition hover:bg-emerald-950 hover:text-white"
             >
               Reserve a court

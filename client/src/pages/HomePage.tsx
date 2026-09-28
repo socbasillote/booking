@@ -432,7 +432,7 @@ export function HomePage() {
               {/* CTA */}
               <div className="flex flex-wrap items-center gap-4">
                 <Link
-                  to="/book/maria-studio"
+                  to="/book/westmont"
                   className="group inline-flex items-center gap-4 rounded-full bg-lime-300 px-7 py-4 text-sm font-black text-emerald-950 transition hover:bg-lime-200"
                 >
                   Book a Court
@@ -1060,7 +1060,7 @@ export function HomePage() {
               </div>
 
               <Link
-                to="/book/maria-studio"
+                to="/book/westmont"
                 className="group inline-flex w-fit items-center gap-4 rounded-full bg-emerald-950 px-7 py-4 text-xs font-black uppercase tracking-[0.16em] text-white transition duration-300 hover:bg-lime-300 hover:text-emerald-950"
               >
                 Explore Clubs
@@ -1180,7 +1180,7 @@ export function HomePage() {
                   </div>
 
                   <Link
-                    to="/book/maria-studio"
+                    to="/book/westmont"
                     className="group mt-10 flex items-center justify-between rounded-2xl bg-lime-300 px-6 py-4 text-sm font-black uppercase tracking-[0.14em] text-emerald-950 transition hover:bg-lime-200"
                   >
                     Join the Club
@@ -1320,7 +1320,7 @@ export function HomePage() {
 
                 <div className="mt-9 flex flex-wrap gap-3">
                   <Link
-                    to="/book/maria-studio"
+                    to="/book/westmont"
                     className="group inline-flex items-center gap-4 rounded-full bg-lime-300 px-7 py-4 text-sm font-black text-emerald-950 transition hover:bg-lime-200"
                   >
                     Book Your Court
