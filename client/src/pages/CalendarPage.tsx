@@ -16,14 +16,6 @@ type Booking = {
   date: string;
   time: string;
   status: "Confirmed" | "Pending" | "Completed" | "Rejected";
-  payment: "Unpaid" | "Deposit" | "Paid";
-  paymentMethod:
-    | "Cash"
-    | "Card"
-    | "GCash"
-    | "Bank transfer"
-    | "PayPal"
-    | "PayMongo";
 };
 type Settings = {
   business?: {
@@ -61,8 +53,6 @@ const normalize = (raw: Partial<Booking> & { _id?: string }) =>
     date: raw.date ?? keyOf(new Date()),
     time: raw.time ?? "09:00",
     status: raw.status ?? "Pending",
-    payment: raw.payment ?? "Unpaid",
-    paymentMethod: raw.paymentMethod ?? "PayPal",
   }) as Booking;
 const bookingTone = (status: Booking["status"]) =>
   status === "Confirmed"
@@ -102,8 +92,6 @@ export function CalendarPage() {
     date: keyOf(today),
     time: "09:00",
     status: "Pending" as Booking["status"],
-    payment: "Unpaid" as Booking["payment"],
-    paymentMethod: "PayPal" as Booking["paymentMethod"],
   });
   const courts = useMemo(
     () =>
@@ -1157,6 +1145,7 @@ export function CalendarPage() {
                   <option>Pending</option>
                   <option>Confirmed</option>
                   <option>Completed</option>
+                  <option>Rejected</option>
                 </select>
               </label>
               <div className="flex justify-end gap-2 sm:col-span-2">

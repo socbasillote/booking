@@ -24,6 +24,11 @@ const BookingsPage = lazy(() =>
     default: module.BookingsPage,
   })),
 );
+const PaymentsPage = lazy(() =>
+  import("./pages/PaymentsPage").then((module) => ({
+    default: module.PaymentsPage,
+  })),
+);
 const CustomersPage = lazy(() =>
   import("./pages/CustomersPage").then((module) => ({
     default: module.CustomersPage,
@@ -123,6 +128,16 @@ function ProtectedApp() {
           }
         />
         <Route path="/bookings" element={<BookingsPage />} />
+        <Route
+          path="/payments"
+          element={
+            user?.role === "staff" ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <PaymentsPage />
+            )
+          }
+        />
         <Route path="/customers" element={<CustomersPage />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route
@@ -208,14 +223,45 @@ function ProtectedOnboarding() {
   return <BusinessSetupPage />;
 }
 
+function AuthPageRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useSelector(
+    (state: RootState) => state.auth,
+  );
+
+  if (isAuthenticated) {
+    return (
+      <Navigate
+        to={user?.onboardingComplete ? "/dashboard" : "/onboarding"}
+        replace
+      />
+    );
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <Provider store={store}>
       <BrowserRouter>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/login"
+              element={
+                <AuthPageRoute>
+                  <LoginPage />
+                </AuthPageRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <AuthPageRoute>
+                  <RegisterPage />
+                </AuthPageRoute>
+              }
+            />
             <Route path="/onboarding" element={<ProtectedOnboarding />} />
             <Route path="/book/:slug" element={<PublicBookingPage />} />
             <Route

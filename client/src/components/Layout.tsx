@@ -28,6 +28,7 @@ import {
   X,
   PanelLeftOpen,
   PanelLeft,
+  UserRoundCog,
 } from "lucide-react";
 import { logout, updateUser } from "../features/auth/authSlice";
 import { apiRequestWithCache } from "../lib/api";
@@ -54,7 +55,7 @@ const operationsNav = [
 ];
 
 const growthNav = [
-  { label: "Payments", to: "/bookings", icon: CreditCard },
+  { label: "Payments", to: "/payments", icon: CreditCard },
   { label: "Promotions", to: "/promotions", icon: Megaphone },
   { label: "Reports", to: "/reports", icon: BarChart3 },
 ];
@@ -65,6 +66,7 @@ const restrictedForStaff = new Set([
   "Reports",
   "Settings",
   "Availability",
+  "Payments",
 ]);
 
 type UserPreferences = {
@@ -468,7 +470,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
-                  <Settings size={18} />
+                  <UserRoundCog size={18} />
                 </span>
 
                 <span>
@@ -872,7 +874,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   onClick={() => navigate("/settings")}
                   className="hidden shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:block"
                 >
-                  Business Settings
+                  <Settings size={18} />
                 </button>
               )}
             </div>

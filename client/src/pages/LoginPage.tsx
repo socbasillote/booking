@@ -40,8 +40,8 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
       <div className="login-card page-card p-7">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-lg font-semibold text-white">
-            S
+          <div className="mx-auto mb-3 flex h-12 w-42 items-center justify-center rounded-xl  text-lg font-semibold text-emerald">
+            WESTMONT
           </div>
           <h1 className="text-2xl font-semibold text-slate-900">
             Welcome back
@@ -55,7 +55,7 @@ export function LoginPage() {
           <div>
             <input
               name="email"
-              defaultValue="alicia@sidebooking.com"
+              defaultValue="admin@westmont.com"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="email"
             />
@@ -64,7 +64,7 @@ export function LoginPage() {
           <div>
             <input
               name="password"
-              defaultValue="password123"
+              defaultValue="westmont123"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-slate-300"
               type="password"
             />
@@ -72,7 +72,7 @@ export function LoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800"
+            className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-800"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -85,7 +85,7 @@ export function LoginPage() {
           Don't have an account?{" "}
           <button
             type="button"
-            onClick={() => navigate("/register")}
+            onClick={() => navigate("/login")}
             className="font-medium text-slate-900 hover:underline"
           >
             Create an account
@@ -93,7 +93,7 @@ export function LoginPage() {
         </div>
 
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
-          Demo account: alicia@sidebooking.com
+          Demo account: admin@westmont.com
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
@@ -19,19 +20,14 @@ type Booking = {
   date: string;
   time: string;
   status: "Confirmed" | "Pending" | "Completed" | "Rejected";
-  payment: "Unpaid" | "Deposit" | "Paid";
-  paymentMethod:
-    | "Cash"
-    | "Card"
-    | "GCash"
-    | "Bank transfer"
-    | "PayPal"
-    | "PayMongo";
+  court?: string;
+  amount?: number;
 };
 
 export function BookingsPage() {
   const [params] = useSearchParams();
   const [open, setOpen] = useState(params.get("new") === "1");
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [query, setQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | Booking["status"]>(
@@ -43,9 +39,6 @@ export function BookingsPage() {
         ? (initialStatus as Booking["status"])
         : "";
     },
-  );
-  const [paymentFilter, setPaymentFilter] = useState<"" | Booking["payment"]>(
-    "",
   );
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -98,8 +91,11 @@ export function BookingsPage() {
     setBusy(true);
     const form = new FormData(event.currentTarget);
     try {
-      await apiRequest<{ booking: Booking }>("/bookings", {
-        method: "POST",
+      const bookingPath = editingBooking
+        ? `/bookings/${editingBooking.id}`
+        : "/bookings";
+      await apiRequest<{ booking: Booking }>(bookingPath, {
+        method: editingBooking ? "PATCH" : "POST",
         body: JSON.stringify({
           customer: String(form.get("customer")),
           email: String(form.get("email")),
@@ -107,14 +103,12 @@ export function BookingsPage() {
           staff: String(form.get("staff")),
           date: String(form.get("date")),
           time: String(form.get("time")),
+          court: String(form.get("court")),
           status: String(form.get("status")) as Booking["status"],
-          payment: String(form.get("payment")) as Booking["payment"],
-          paymentMethod: String(
-            form.get("paymentMethod"),
-          ) as Booking["paymentMethod"],
         }),
       });
       setOpen(false);
+      setEditingBooking(null);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create booking");
@@ -123,32 +117,28 @@ export function BookingsPage() {
     }
   }
 
-  async function patchBooking<K extends "status" | "payment">(
-    id: string,
-    field: K,
-    value: Booking[K],
-  ) {
+  async function patchBooking(id: string, value: Booking["status"]) {
     const booking = bookings.find((row) => row.id === id);
     if (!booking) return;
 
-    const previousValue = booking[field];
-    const operationKey = `${id}:${field}`;
+    const previousValue = booking.status;
+    const operationKey = `${id}:status`;
     const sequence = (updateSequence.current.get(operationKey) ?? 0) + 1;
     updateSequence.current.set(operationKey, sequence);
     setError("");
     setBookings((current) =>
-      current.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
+      current.map((row) => (row.id === id ? { ...row, status: value } : row)),
     );
 
     try {
       const result = await apiRequest<{ booking: Booking }>(`/bookings/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify({ status: value }),
       });
       if (updateSequence.current.get(operationKey) === sequence) {
         setBookings((current) =>
           current.map((row) =>
-            row.id === id ? { ...row, [field]: result.booking[field] } : row,
+            row.id === id ? { ...row, status: result.booking.status } : row,
           ),
         );
       }
@@ -156,11 +146,27 @@ export function BookingsPage() {
       if (updateSequence.current.get(operationKey) === sequence) {
         setBookings((current) =>
           current.map((row) =>
-            row.id === id ? { ...row, [field]: previousValue } : row,
+            row.id === id ? { ...row, status: previousValue } : row,
           ),
         );
       }
       setError(err instanceof Error ? err.message : "Unable to update booking");
+    }
+  }
+
+  async function removeBooking(booking: Booking) {
+    if (
+      !window.confirm(`Cancel reservation ${booking.confirmationCode ?? ""}?`)
+    ) {
+      return;
+    }
+    try {
+      await apiRequest<{ booking: Booking }>(`/bookings/${booking.id}`, {
+        method: "DELETE",
+      });
+      setBookings((current) => current.filter((row) => row.id !== booking.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to cancel booking");
     }
   }
 
@@ -170,18 +176,25 @@ export function BookingsPage() {
       .includes(query.toLowerCase());
     const matchesDate = !dateFilter || row.date === dateFilter;
     const matchesStatus = !statusFilter || row.status === statusFilter;
-    const matchesPayment = !paymentFilter || row.payment === paymentFilter;
-    return matchesQuery && matchesDate && matchesStatus && matchesPayment;
+    return matchesQuery && matchesDate && matchesStatus;
   });
 
   return (
     <div className="min-w-0 space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          Bookings
-        </h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+            Bookings
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Reservations, schedules, and booking status
+          </p>
+        </div>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setEditingBooking(null);
+            setOpen(true);
+          }}
           className=" rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
         >
           + New Booking
@@ -221,27 +234,13 @@ export function BookingsPage() {
             <option value="Completed">Completed</option>
             <option value="Rejected">Rejected</option>
           </select>
-          <select
-            value={paymentFilter}
-            onChange={(event) =>
-              setPaymentFilter(event.target.value as "" | Booking["payment"])
-            }
-            aria-label="Filter by payment"
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
-          >
-            <option value="">All payments</option>
-            <option value="Unpaid">Unpaid</option>
-            <option value="Deposit">Deposit</option>
-            <option value="Paid">Paid</option>
-          </select>
-          {(dateFilter || statusFilter || paymentFilter || query) && (
+          {(dateFilter || statusFilter || query) && (
             <button
               type="button"
               onClick={() => {
                 setQuery("");
                 setDateFilter("");
                 setStatusFilter("");
-                setPaymentFilter("");
               }}
               className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
@@ -275,7 +274,7 @@ export function BookingsPage() {
                     "Staff",
                     "Date & Time",
                     "Status",
-                    "Payment",
+                    "Actions",
                   ].map((heading) => (
                     <th key={heading} className="px-4 py-3 font-medium">
                       {heading}
@@ -284,76 +283,93 @@ export function BookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-200">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {row.customer}
-                      <div className="text-xs font-normal text-slate-500">
-                        {row.email}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{row.service}</td>
-                    <td className="px-4 py-3 text-slate-600">{row.staff}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {row.date} · {row.time}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-block h-2.5 w-2.5 rounded-full ${
-                            row.status === "Rejected"
-                              ? "bg-red-500"
-                              : row.status === "Confirmed"
-                                ? "bg-emerald-500"
-                                : row.status === "Completed"
-                                  ? "bg-blue-500"
-                                  : "bg-amber-500"
-                          }`}
-                        />
-                        <select
-                          value={row.status}
-                          onChange={(event) =>
-                            void patchBooking(
-                              row.id,
-                              "status",
-                              event.target.value as Booking["status"],
-                            )
-                          }
-                          className={`rounded-lg border px-2 py-1 text-xs ${
-                            row.status === "Rejected"
-                              ? "border-red-200 bg-red-50 text-red-700"
-                              : "border-slate-200 bg-white text-slate-700"
-                          }`}
-                        >
-                          <option>Pending</option>
-                          <option>Confirmed</option>
-                          <option>Completed</option>
-                          <option>Rejected</option>
-                        </select>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={row.payment}
-                        onChange={(event) =>
-                          void patchBooking(
-                            row.id,
-                            "payment",
-                            event.target.value as Booking["payment"],
-                          )
-                        }
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
-                      >
-                        <option>Unpaid</option>
-                        <option>Deposit</option>
-                        <option>Paid</option>
-                      </select>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {row.paymentMethod}
-                      </div>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-sm text-slate-500"
+                    >
+                      No reservations match these filters.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filtered.map((row) => (
+                    <tr key={row.id} className="border-t border-slate-200">
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {row.customer}
+                        <div className="text-xs font-normal text-slate-500">
+                          {row.email}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {row.service}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{row.staff}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {row.date} · {row.time}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-block h-2.5 w-2.5 rounded-full ${
+                              row.status === "Rejected"
+                                ? "bg-red-500"
+                                : row.status === "Confirmed"
+                                  ? "bg-emerald-500"
+                                  : row.status === "Completed"
+                                    ? "bg-blue-500"
+                                    : "bg-amber-500"
+                            }`}
+                          />
+                          <select
+                            value={row.status}
+                            onChange={(event) =>
+                              void patchBooking(
+                                row.id,
+                                event.target.value as Booking["status"],
+                              )
+                            }
+                            className={`rounded-lg border px-2 py-1 text-xs ${
+                              row.status === "Rejected"
+                                ? "border-red-200 bg-red-50 text-red-700"
+                                : "border-slate-200 bg-white text-slate-700"
+                            }`}
+                          >
+                            <option>Pending</option>
+                            <option>Confirmed</option>
+                            <option>Completed</option>
+                            <option>Rejected</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingBooking(row);
+                              setOpen(true);
+                            }}
+                            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+                            aria-label={`Edit reservation for ${row.customer}`}
+                            title="Edit reservation"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void removeBooking(row)}
+                            className="rounded-lg p-2 text-rose-700 hover:bg-rose-50"
+                            aria-label={`Cancel reservation for ${row.customer}`}
+                            title="Cancel reservation"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -365,11 +381,14 @@ export function BookingsPage() {
             onSubmit={submit}
             className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
           >
-            <h2 className="text-xl font-semibold">New booking</h2>
+            <h2 className="text-xl font-semibold">
+              {editingBooking ? "Edit reservation" : "New reservation"}
+            </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <input
                 name="customer"
                 required
+                defaultValue={editingBooking?.customer}
                 placeholder="Customer name"
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
@@ -377,11 +396,14 @@ export function BookingsPage() {
                 name="email"
                 type="email"
                 required
+                defaultValue={editingBooking?.email}
                 placeholder="Customer email"
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
               <select
                 name="service"
+                defaultValue={editingBooking?.service ?? services[0]?.name}
+                required
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               >
                 {services.map((service) => (
@@ -391,7 +413,7 @@ export function BookingsPage() {
               <input
                 name="staff"
                 required
-                defaultValue="Maria"
+                defaultValue={editingBooking?.staff ?? "Maria"}
                 placeholder="Staff member"
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
@@ -399,6 +421,7 @@ export function BookingsPage() {
                 name="date"
                 required
                 type="date"
+                defaultValue={editingBooking?.date}
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
               <input
@@ -406,10 +429,19 @@ export function BookingsPage() {
                 required
                 type="time"
                 step="1800"
+                defaultValue={editingBooking?.time}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                name="court"
+                required
+                defaultValue={editingBooking?.court ?? "Court 1"}
+                placeholder="Court or room"
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
               <select
                 name="status"
+                defaultValue={editingBooking?.status ?? "Pending"}
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               >
                 <option>Confirmed</option>
@@ -417,30 +449,14 @@ export function BookingsPage() {
                 <option>Completed</option>
                 <option>Rejected</option>
               </select>
-              <select
-                name="payment"
-                className="rounded-xl border border-slate-200 px-3 py-2.5"
-              >
-                <option>Unpaid</option>
-                <option>Deposit</option>
-                <option>Paid</option>
-              </select>
-              <select
-                name="paymentMethod"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 sm:col-span-2"
-              >
-                <option>Cash</option>
-                <option>Card</option>
-                <option>GCash</option>
-                <option>Bank transfer</option>
-                <option>PayPal</option>
-                <option>PayMongo</option>
-              </select>
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  setEditingBooking(null);
+                }}
                 className="rounded-xl border px-4 py-2.5"
               >
                 Cancel
@@ -449,7 +465,13 @@ export function BookingsPage() {
                 disabled={busy}
                 className="rounded-xl bg-slate-900 px-4 py-2.5 text-white"
               >
-                {busy ? "Creating..." : "Create booking"}
+                {busy
+                  ? editingBooking
+                    ? "Saving..."
+                    : "Creating..."
+                  : editingBooking
+                    ? "Save changes"
+                    : "Create reservation"}
               </button>
             </div>
           </form>

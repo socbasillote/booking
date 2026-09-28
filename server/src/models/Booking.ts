@@ -16,6 +16,15 @@ export interface IBooking extends Document {
   date: string;
   time: string;
   payment: "Unpaid" | "Deposit" | "Paid";
+  amountPaid: number;
+  amountRefunded: number;
+  transactions: Array<{
+    type: "Charge" | "Refund";
+    amount: number;
+    method: string;
+    reference: string;
+    createdAt: Date;
+  }>;
   paymentMethod:
     | "Cash"
     | "Card"
@@ -27,6 +36,7 @@ export interface IBooking extends Document {
   confirmationCode: string;
   paymongoCheckoutSessionId?: string;
   confirmationEmailSentAt?: Date;
+  archivedAt?: Date;
   createdAt: Date;
 }
 
@@ -55,6 +65,17 @@ const bookingSchema = new Schema<IBooking>(
       enum: ["Unpaid", "Deposit", "Paid"],
       default: "Unpaid",
     },
+    amountPaid: { type: Number, min: 0, default: 0 },
+    amountRefunded: { type: Number, min: 0, default: 0 },
+    transactions: [
+      {
+        type: { type: String, enum: ["Charge", "Refund"], required: true },
+        amount: { type: Number, min: 0, required: true },
+        method: { type: String, required: true },
+        reference: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     paymentMethod: {
       type: String,
       enum: ["Cash", "Card", "GCash", "Bank transfer", "PayPal", "PayMongo"],
@@ -62,6 +83,7 @@ const bookingSchema = new Schema<IBooking>(
     },
     paymongoCheckoutSessionId: { type: String, index: true },
     confirmationEmailSentAt: { type: Date },
+    archivedAt: { type: Date, default: null },
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Completed", "Rejected"],
