@@ -26,6 +26,8 @@ import {
   Users,
   Megaphone,
   X,
+  PanelLeftOpen,
+  PanelLeft,
 } from "lucide-react";
 import { logout, updateUser } from "../features/auth/authSlice";
 import { apiRequestWithCache } from "../lib/api";
@@ -227,7 +229,11 @@ export function Layout({ children }: { children: ReactNode }) {
             className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <Menu size={18} />
+            {isCollapsed ? (
+              <PanelLeftOpen size={18} />
+            ) : (
+              <PanelLeft size={18} />
+            )}
           </button>
         </div>
 
