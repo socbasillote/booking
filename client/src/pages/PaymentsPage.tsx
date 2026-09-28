@@ -6,7 +6,7 @@ import {
   Search,
   MoreVertical,
 } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonLoader } from "../components/SkeletonLoader";
 
 type PaymentMethod =
@@ -22,6 +22,7 @@ type Transaction = {
   method: PaymentMethod;
   reference: string;
   createdAt: string;
+  pending?: boolean;
 };
 type PaymentBooking = {
   id: string;
@@ -118,29 +119,77 @@ export function PaymentsPage() {
 
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
+  const loadSequenceRef = useRef(0);
+  const mutationSequenceRef = useRef(new Map<string, number>());
+  const pendingTransactionsRef = useRef(new Set<string>());
 
   async function loadPayments() {
+    const loadSequence = ++loadSequenceRef.current;
+    const mutationSnapshot = new Map(mutationSequenceRef.current);
     setError("");
+
+    function applyPayments(rows: Array<PaymentBooking & { _id?: string }>) {
+      if (loadSequence !== loadSequenceRef.current) return;
+      const incoming = rows.map((booking) => ({
+        ...booking,
+        id: booking.id ?? String(booking._id ?? ""),
+        transactions: booking.transactions ?? [],
+      }));
+
+      setBookings((current) => {
+        const currentById = new Map(
+          current.map((booking) => [booking.id, booking]),
+        );
+        const merged = incoming.map((booking) => {
+          const mutationChanged =
+            (mutationSequenceRef.current.get(booking.id) ?? 0) >
+              (mutationSnapshot.get(booking.id) ?? 0) ||
+            pendingTransactionsRef.current.has(booking.id);
+          return mutationChanged
+            ? (currentById.get(booking.id) ?? booking)
+            : booking;
+        });
+
+        for (const booking of current) {
+          const mutationChanged =
+            (mutationSequenceRef.current.get(booking.id) ?? 0) >
+              (mutationSnapshot.get(booking.id) ?? 0) ||
+            pendingTransactionsRef.current.has(booking.id);
+          if (
+            mutationChanged &&
+            !incoming.some((row) => row.id === booking.id)
+          ) {
+            merged.push(booking);
+          }
+        }
+        return merged;
+      });
+    }
+
     try {
-      const data = await apiRequest<{
+      await apiRequestWithCache<{
         payments: Array<PaymentBooking & { _id?: string }>;
-      }>("/bookings/payments");
-      setBookings(
-        (data.payments ?? []).map((booking) => ({
-          ...booking,
-          id: booking.id ?? String(booking._id ?? ""),
-          transactions: booking.transactions ?? [],
-        })),
-      );
+      }>("/bookings/payments", (cached) => {
+        applyPayments(cached.payments ?? []);
+        if (loadSequence === loadSequenceRef.current) setLoading(false);
+      }).then((data) => applyPayments(data.payments ?? []));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load payments");
+      if (loadSequence === loadSequenceRef.current) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load payments",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (loadSequence === loadSequenceRef.current) setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadPayments();
+    const timer = window.setTimeout(() => void loadPayments(), 0);
+    return () => {
+      window.clearTimeout(timer);
+      loadSequenceRef.current += 1;
+    };
   }, []);
 
   useEffect(() => {
@@ -164,35 +213,101 @@ export function PaymentsPage() {
     event.preventDefault();
     if (!transactionBooking) return;
     const form = new FormData(event.currentTarget);
+    const bookingId = transactionBooking.id;
+    if (pendingTransactionsRef.current.has(bookingId)) return;
+
+    const booking = bookings.find((row) => row.id === bookingId);
+    if (!booking) return;
+
+    const amount = Number(form.get("amount"));
+    const method = String(form.get("method")) as PaymentMethod;
+    const previousCollected = collectedAmount(booking);
+    const allowedAmount =
+      transactionType === "Charge"
+        ? booking.amount - previousCollected
+        : previousCollected;
+    if (!Number.isFinite(amount) || amount <= 0 || amount > allowedAmount) {
+      setError(
+        transactionType === "Charge"
+          ? "The charge must be greater than zero and no more than the outstanding balance."
+          : "The refund must be greater than zero and no more than the amount collected.",
+      );
+      return;
+    }
+
+    const mutationSequence =
+      (mutationSequenceRef.current.get(bookingId) ?? 0) + 1;
+    mutationSequenceRef.current.set(bookingId, mutationSequence);
+    pendingTransactionsRef.current.add(bookingId);
+    const nextCollected =
+      transactionType === "Charge"
+        ? previousCollected + amount
+        : previousCollected - amount;
+    const nextRefunded =
+      (booking.amountRefunded ?? 0) +
+      (transactionType === "Refund" ? amount : 0);
+    const optimisticTransaction: Transaction = {
+      type: transactionType,
+      amount,
+      method,
+      reference: `pending-${mutationSequence}`,
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+    const optimisticBooking: PaymentBooking = {
+      ...booking,
+      amountPaid: nextCollected,
+      amountRefunded: nextRefunded,
+      payment:
+        nextCollected <= 0
+          ? "Unpaid"
+          : nextCollected >= booking.amount
+            ? "Paid"
+            : "Deposit",
+      paymentMethod: method,
+      transactions: [optimisticTransaction, ...(booking.transactions ?? [])],
+    };
+
     setBusy(true);
     setError("");
+    setBookings((current) =>
+      current.map((row) => (row.id === bookingId ? optimisticBooking : row)),
+    );
     try {
       const data = await apiRequest<{ booking: PaymentBooking }>(
-        `/bookings/${transactionBooking.id}/transactions`,
+        `/bookings/${bookingId}/transactions`,
         {
           method: "POST",
           body: JSON.stringify({
             type: transactionType,
-            amount: Number(form.get("amount")),
-            method: String(form.get("method")) as PaymentMethod,
+            amount,
+            method,
           }),
         },
       );
-      setBookings((current) =>
-        current.map((booking) =>
-          booking.id === transactionBooking.id
-            ? {
-                ...data.booking,
-                id: data.booking.id ?? String(data.booking._id ?? booking.id),
-                transactions: data.booking.transactions ?? [],
-              }
-            : booking,
-        ),
-      );
+      if (mutationSequenceRef.current.get(bookingId) === mutationSequence) {
+        setBookings((current) =>
+          current.map((row) =>
+            row.id === bookingId
+              ? {
+                  ...data.booking,
+                  id: data.booking.id ?? String(data.booking._id ?? row.id),
+                  transactions: data.booking.transactions ?? [],
+                }
+              : row,
+          ),
+        );
+      }
       setTransactionBooking(null);
     } catch (err) {
+      if (mutationSequenceRef.current.get(bookingId) === mutationSequence) {
+        setBookings((current) =>
+          current.map((row) => (row.id === bookingId ? booking : row)),
+        );
+      }
       setError(err instanceof Error ? err.message : "Unable to record payment");
     } finally {
+      pendingTransactionsRef.current.delete(bookingId);
       setBusy(false);
     }
   }
@@ -499,6 +614,11 @@ export function PaymentsPage() {
                                           <div className="font-medium text-slate-700">
                                             {transaction.type} ·{" "}
                                             {money(transaction.amount)}
+                                            {transaction.pending && (
+                                              <span className="ml-2 text-amber-700">
+                                                Saving
+                                              </span>
+                                            )}
                                           </div>
                                           <div>
                                             {transaction.method} ·{" "}
