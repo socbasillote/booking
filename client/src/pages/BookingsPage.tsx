@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { apiRequest } from "../lib/api";
+import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Service = {
@@ -55,11 +55,23 @@ export function BookingsPage() {
 
   async function loadData() {
     try {
-      const bookingData = await apiRequest<{
+      const bookingData = await apiRequestWithCache<{
         bookings: Array<Booking & { _id?: string }>;
-      }>("/bookings");
-      const serviceData = await apiRequest<{ services: Service[] }>(
+      }>("/bookings", (data) => {
+        setBookings(
+          (data.bookings ?? []).map((row) => ({
+            ...row,
+            id: row.id ?? String(row._id ?? ""),
+          })),
+        );
+        setLoading(false);
+      });
+      const serviceData = await apiRequestWithCache<{ services: Service[] }>(
         "/services",
+        (data) => {
+          setServices(data.services ?? []);
+          setLoading(false);
+        },
       );
       const mapped = (bookingData.bookings ?? []).map((row) => ({
         ...row,

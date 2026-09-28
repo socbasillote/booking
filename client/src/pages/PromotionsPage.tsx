@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Promotion = {
@@ -38,7 +38,13 @@ export function PromotionsPage() {
 
   async function loadPromotions() {
     try {
-      const data = await apiRequest<{ promotions: Promotion[] }>("/promotions");
+      const data = await apiRequestWithCache<{ promotions: Promotion[] }>(
+        "/promotions",
+        (cached) => {
+          setPromotions(cached.promotions ?? []);
+          setLoading(false);
+        },
+      );
       setPromotions(data.promotions ?? []);
     } catch (err) {
       setError(

@@ -5,6 +5,36 @@ const configuredApiUrl = (
 const API_URL = configuredApiUrl.endsWith("/api")
   ? configuredApiUrl
   : `${configuredApiUrl}/api`;
+const API_CACHE_PREFIX = "sidebooking_api_cache_";
+const API_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
+
+type CachedResponse<T> = {
+  expiresAt: number;
+  data: T;
+};
+
+async function cacheKey(path: string, token: string | null) {
+  const identity = token ?? "anonymous";
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(identity),
+  );
+  const fingerprint = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${API_CACHE_PREFIX}${fingerprint}_${path}`;
+}
+
+function clearApiCache() {
+  try {
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(API_CACHE_PREFIX)) localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage may be unavailable in restricted browser contexts.
+  }
+}
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -19,6 +49,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const token = localStorage.getItem("sidebooking_token");
   const normalizedPath = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  const method = (options.method ?? "GET").toUpperCase();
   const response = await fetch(`${API_URL}${normalizedPath}`, {
     ...options,
     headers: {
@@ -33,7 +64,44 @@ export async function apiRequest<T>(
       body.message ?? body.errors?.join(", ") ?? "Request failed",
     );
   }
-  return body.data as T;
+  const data = body.data as T;
+  if (method === "GET" && !normalizedPath.startsWith("/auth/")) {
+    try {
+      const key = await cacheKey(normalizedPath, token);
+      const cached: CachedResponse<T> = {
+        expiresAt: Date.now() + API_CACHE_MAX_AGE,
+        data,
+      };
+      localStorage.setItem(key, JSON.stringify(cached));
+    } catch {
+      // Caching is best-effort; the network response remains authoritative.
+    }
+  } else if (method !== "GET") {
+    clearApiCache();
+  }
+  return data;
+}
+
+export async function apiRequestWithCache<T>(
+  path: string,
+  onCachedData: (data: T) => void,
+): Promise<T> {
+  const normalizedPath = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  try {
+    const key = await cacheKey(
+      normalizedPath,
+      localStorage.getItem("sidebooking_token"),
+    );
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const parsed = JSON.parse(cached) as CachedResponse<T>;
+      if (parsed.expiresAt > Date.now()) onCachedData(parsed.data);
+      else localStorage.removeItem(key);
+    }
+  } catch {
+    // Continue with the network request when cached data cannot be read.
+  }
+  return apiRequest<T>(normalizedPath);
 }
 
 export type ServicePayload = {
@@ -80,11 +148,13 @@ export async function fetchBookings() {
 }
 
 export async function saveSession(data: { token: string; user: unknown }) {
+  clearApiCache();
   localStorage.setItem("sidebooking_token", data.token);
   localStorage.setItem("sidebooking_user", JSON.stringify(data.user));
 }
 
 export function clearSession() {
+  clearApiCache();
   localStorage.removeItem("sidebooking_token");
   localStorage.removeItem("sidebooking_user");
 }

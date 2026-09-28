@@ -9,7 +9,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import { apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Customer = {
@@ -59,8 +59,17 @@ export function CustomersPage() {
     async function loadCustomers() {
       try {
         const [customerData, bookingData] = await Promise.all([
-          apiRequest<{ customers: Customer[] }>("/customers"),
-          apiRequest<{ bookings: Booking[] }>("/bookings"),
+          apiRequestWithCache<{ customers: Customer[] }>(
+            "/customers",
+            (data) => {
+              setCustomers(data.customers ?? []);
+              setLoading(false);
+            },
+          ),
+          apiRequestWithCache<{ bookings: Booking[] }>("/bookings", (data) => {
+            setBookings(data.bookings ?? []);
+            setLoading(false);
+          }),
         ]);
         setCustomers(customerData.customers ?? []);
         setBookings(bookingData.bookings ?? []);

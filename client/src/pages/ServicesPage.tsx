@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Service = {
@@ -26,10 +26,14 @@ export function ServicesPage() {
 
   async function loadServices() {
     try {
-      const data = await apiRequest<{
+      const data = await apiRequestWithCache<{
         services: Service[];
         currency?: string;
-      }>("/services");
+      }>("/services", (cached) => {
+        setServices(cached.services ?? []);
+        setCurrency(cached.currency ?? "PHP");
+        setLoading(false);
+      });
       setServices(data.services ?? []);
       setCurrency(data.currency ?? "PHP");
     } catch (err) {

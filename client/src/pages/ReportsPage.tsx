@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { apiRequest } from "../lib/api";
+import { apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Booking = {
@@ -40,8 +40,17 @@ export function ReportsPage() {
     async function loadReports() {
       try {
         const [bookingData, businessData] = await Promise.all([
-          apiRequest<{ bookings: Booking[] }>("/bookings"),
-          apiRequest<{ business?: { currency?: string } }>("/business"),
+          apiRequestWithCache<{ bookings: Booking[] }>("/bookings", (data) => {
+            setBookings(data.bookings ?? []);
+            setLoading(false);
+          }),
+          apiRequestWithCache<{ business?: { currency?: string } }>(
+            "/business",
+            (data) => {
+              setCurrency(data.business?.currency ?? "PHP");
+              setLoading(false);
+            },
+          ),
         ]);
         setBookings(bookingData.bookings ?? []);
         setCurrency(businessData.business?.currency ?? "PHP");

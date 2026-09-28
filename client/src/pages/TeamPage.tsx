@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type TeamMember = {
@@ -19,7 +19,13 @@ export function TeamPage() {
   useEffect(() => {
     async function loadTeam() {
       try {
-        const data = await apiRequest<{ users: TeamMember[] }>("/team");
+        const data = await apiRequestWithCache<{ users: TeamMember[] }>(
+          "/team",
+          (cached) => {
+            setTeam(cached.users ?? []);
+            setLoading(false);
+          },
+        );
         setTeam(data.users ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load team");

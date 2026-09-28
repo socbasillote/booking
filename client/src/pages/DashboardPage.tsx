@@ -7,7 +7,7 @@ import {
   Plus,
   UserRoundCheck,
 } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import { apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
 
 type Booking = {
@@ -55,8 +55,22 @@ export function DashboardPage() {
     async function loadDashboard() {
       try {
         const [data, serviceData] = await Promise.all([
-          apiRequest<{ bookings: BookingResponse[] }>("/bookings"),
-          apiRequest<{ services: Service[] }>("/services"),
+          apiRequestWithCache<{ bookings: BookingResponse[] }>(
+            "/bookings",
+            (data) => {
+              setBookings(
+                (data.bookings ?? []).map((row) => ({
+                  ...row,
+                  id: row.id ?? row._id ?? "",
+                })),
+              );
+              setLoading(false);
+            },
+          ),
+          apiRequestWithCache<{ services: Service[] }>("/services", (data) => {
+            setServices(data.services ?? []);
+            setLoading(false);
+          }),
         ]);
         setBookings(
           (data.bookings ?? []).map((row) => ({
