@@ -12,6 +12,8 @@ const defaultPickleballService = {
   durationMinutes: 60,
   bufferMinutes: 0,
   category: "Sports",
+  icon: "court",
+  color: "#059669",
   isActive: true,
   onlineBookingEnabled: true,
   assignedStaffIds: [],

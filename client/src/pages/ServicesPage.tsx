@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
+import { SERVICE_ICONS, serviceIconFor } from "../lib/serviceAppearance";
 
 type Service = {
   id: string;
@@ -11,6 +12,8 @@ type Service = {
   duration?: number;
   category?: string;
   description?: string;
+  icon?: string;
+  color?: string;
   isActive?: boolean;
   onlineBookingEnabled?: boolean;
 };
@@ -61,6 +64,8 @@ export function ServicesPage() {
         durationMinutes: Number(form.get("duration")),
         bufferMinutes: 0,
         category: String(form.get("category") ?? "General").trim(),
+        icon: String(form.get("icon") ?? "court"),
+        color: String(form.get("color") ?? "#059669"),
         isActive: form.get("isActive") === "on",
         onlineBookingEnabled: form.get("onlineBookingEnabled") === "on",
         assignedStaffIds: [],
@@ -160,15 +165,31 @@ export function ServicesPage() {
           {services.map((service) => (
             <div key={service.id} className="page-card min-w-0 p-5">
               <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-xl font-semibold text-slate-900">
-                    {service.name}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {service.onlineBookingEnabled === false
-                      ? "Online booking disabled"
-                      : "Online booking enabled"}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {(() => {
+                    const Icon = serviceIconFor(service.icon);
+                    return (
+                      <span
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                        style={{
+                          color: service.color ?? "#059669",
+                          backgroundColor: `${service.color ?? "#059669"}1A`,
+                        }}
+                      >
+                        <Icon size={20} />
+                      </span>
+                    );
+                  })()}
+                  <div className="min-w-0">
+                    <h2 className="truncate text-xl font-semibold text-slate-900">
+                      {service.name}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {service.onlineBookingEnabled === false
+                        ? "Online booking disabled"
+                        : "Online booking enabled"}
+                    </p>
+                  </div>
                 </div>
                 <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
                   {service.isActive === false ? "Inactive" : "Active"}
@@ -264,6 +285,31 @@ export function ServicesPage() {
                 placeholder="Category"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
               />
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-sm font-medium text-slate-600">
+                  Icon
+                  <select
+                    name="icon"
+                    defaultValue={editingService?.icon ?? "court"}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+                  >
+                    {SERVICE_ICONS.map(({ key, label }) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm font-medium text-slate-600">
+                  Color
+                  <input
+                    name="color"
+                    type="color"
+                    defaultValue={editingService?.color ?? "#059669"}
+                    className="mt-1.5 h-[42px] w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-1"
+                  />
+                </label>
+              </div>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input
                   name="isActive"

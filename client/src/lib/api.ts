@@ -113,6 +113,8 @@ export type ServicePayload = {
     duration?: number;
     category?: string;
     description?: string;
+    icon?: string;
+    color?: string;
     isActive?: boolean;
     onlineBookingEnabled?: boolean;
   }>;

@@ -8,6 +8,8 @@ export interface IService extends Document {
   durationMinutes: number;
   bufferMinutes: number;
   category: string;
+  icon: string;
+  color: string;
   isActive: boolean;
   onlineBookingEnabled: boolean;
   assignedStaffIds: Types.ObjectId[];
@@ -29,6 +31,8 @@ const serviceSchema = new Schema<IService>(
     durationMinutes: { type: Number, required: true, min: 15 },
     bufferMinutes: { type: Number, default: 0, min: 0 },
     category: { type: String, default: "General" },
+    icon: { type: String, default: "court" },
+    color: { type: String, default: "#059669" },
     isActive: { type: Boolean, default: true },
     onlineBookingEnabled: { type: Boolean, default: true },
     assignedStaffIds: [{ type: Schema.Types.ObjectId, ref: "User" }],

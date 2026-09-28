@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Clock3, Plus, X } from "lucide-react";
 import { apiRequest, apiRequestWithCache } from "../lib/api";
 import { addBookingNotification } from "../lib/notifications";
 import { SkeletonBlock, SkeletonLoader } from "../components/SkeletonLoader";
+import { serviceIconFor } from "../lib/serviceAppearance";
 
 type Booking = {
   id: string;
@@ -31,6 +32,11 @@ type Settings = {
     openHour?: string;
     closeHour?: string;
   } | null;
+};
+type CalendarService = {
+  name: string;
+  icon?: string;
+  color?: string;
 };
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const defaultHours = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -72,6 +78,7 @@ const bookingTone = (status: Booking["status"]) =>
 export function CalendarPage() {
   const today = new Date();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [services, setServices] = useState<CalendarService[]>([]);
   const [view, setView] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(mondayOf(today));
   const [selectedDate, setSelectedDate] = useState(keyOf(today));
@@ -124,7 +131,7 @@ export function CalendarPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [bookingData, settingsData] = await Promise.all([
+        const [bookingData, settingsData, serviceData] = await Promise.all([
           apiRequestWithCache<{ bookings: Booking[] }>("/bookings", (data) => {
             setBookings((data.bookings ?? []).map(normalize));
             setLoading(false);
@@ -148,8 +155,13 @@ export function CalendarPage() {
               );
             setLoading(false);
           }),
+          apiRequestWithCache<{ services: CalendarService[] }>(
+            "/services",
+            (data) => setServices(data.services ?? []),
+          ),
         ]);
         setBookings((bookingData.bookings ?? []).map(normalize));
+        setServices(serviceData.services ?? []);
         const business = settingsData.business;
         setCourtCount(Math.max(1, Number(business?.courtsCount ?? 3)));
         setBlocked(business?.disabledCourts ?? []);
@@ -295,6 +307,15 @@ export function CalendarPage() {
           <>
             <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={todayClick}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
+                >
+                  Today
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
                 <div className="flex rounded-xl bg-slate-100 p-1">
                   {(["week", "month"] as const).map((item) => (
                     <button
@@ -319,15 +340,6 @@ export function CalendarPage() {
                     </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={todayClick}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
-                >
-                  Today
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
                 <div className="flex">
                   <button
                     type="button"
@@ -416,6 +428,11 @@ export function CalendarPage() {
                               court,
                               `${String(hour).padStart(2, "0")}:00`,
                             )[0];
+                            const service = services.find(
+                              (item) => item.name === booking?.service,
+                            );
+                            const ServiceIcon = serviceIconFor(service?.icon);
+                            const serviceColor = service?.color ?? "#059669";
                             const unavailable = blocked.includes(court);
                             return (
                               <div
@@ -430,13 +447,21 @@ export function CalendarPage() {
                                   <button
                                     type="button"
                                     onClick={() => setDetail(booking)}
-                                    className={`h-full w-full rounded-lg border p-2 text-left text-[11px] ${bookingTone(booking.status)}`}
+                                    className={`h-full w-full rounded-lg border border-l-[3px] p-2 text-left text-[11px] ${bookingTone(booking.status)}`}
+                                    style={{ borderLeftColor: serviceColor }}
                                   >
                                     <strong className="block truncate">
                                       {booking.customer}
                                     </strong>
-                                    <span className="block truncate opacity-80">
-                                      {booking.service}
+                                    <span className="flex min-w-0 items-center gap-1 truncate opacity-80">
+                                      <ServiceIcon
+                                        size={12}
+                                        className="shrink-0"
+                                        style={{ color: serviceColor }}
+                                      />
+                                      <span className="truncate">
+                                        {booking.service}
+                                      </span>
                                     </span>
                                   </button>
                                 ) : (
@@ -494,12 +519,20 @@ export function CalendarPage() {
                         <div className="mt-2 flex gap-1">
                           {find(keyOf(date))
                             .slice(0, 5)
-                            .map((booking) => (
-                              <span
-                                key={booking.id}
-                                className={`h-2 w-2 rounded-full ${booking.status === "Confirmed" ? "bg-emerald-600" : booking.status === "Completed" ? "bg-sky-500" : "bg-amber-500"}`}
-                              />
-                            ))}
+                            .map((booking) => {
+                              const service = services.find(
+                                (item) => item.name === booking.service,
+                              );
+                              const ServiceIcon = serviceIconFor(service?.icon);
+                              return (
+                                <span key={booking.id} title={booking.service}>
+                                  <ServiceIcon
+                                    size={13}
+                                    style={{ color: service?.color ?? "#059669" }}
+                                  />
+                                </span>
+                              );
+                            })}
                         </div>
                       </button>
                     ),
