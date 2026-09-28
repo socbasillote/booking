@@ -56,7 +56,7 @@ export function TeamPage() {
       });
 
       setShowForm(false);
-  formElement.reset();
+      formElement.reset();
 
       const data = await apiRequest<{ users: TeamMember[] }>("/team");
       setTeam(data.users ?? []);

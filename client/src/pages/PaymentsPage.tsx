@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { CircleDollarSign, FileText, RotateCcw, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  CircleDollarSign,
+  FileText,
+  RotateCcw,
+  Search,
+  MoreVertical,
+} from "lucide-react";
 import { apiRequest } from "../lib/api";
 import { SkeletonLoader } from "../components/SkeletonLoader";
 
@@ -110,6 +116,9 @@ export function PaymentsPage() {
   );
   const [busy, setBusy] = useState(false);
 
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+
   async function loadPayments() {
     setError("");
     try {
@@ -132,6 +141,23 @@ export function PaymentsPage() {
 
   useEffect(() => {
     void loadPayments();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpenActionId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   async function submitTransaction(event: React.FormEvent<HTMLFormElement>) {
@@ -180,14 +206,17 @@ export function PaymentsPage() {
       matchesQuery && (!statusFilter || ledgerStatus(booking) === statusFilter)
     );
   });
+
   const totalCollected = bookings.reduce(
     (total, booking) => total + collectedAmount(booking),
     0,
   );
+
   const totalRefunded = bookings.reduce(
     (total, booking) => total + (booking.amountRefunded ?? 0),
     0,
   );
+
   const outstanding = bookings.reduce(
     (total, booking) =>
       total + Math.max(booking.amount - collectedAmount(booking), 0),
@@ -252,6 +281,7 @@ export function PaymentsPage() {
               className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm"
             />
           </label>
+
           <select
             aria-label="Filter by payment status"
             value={statusFilter}
@@ -292,13 +322,14 @@ export function PaymentsPage() {
                   ].map((heading) => (
                     <th
                       key={heading}
-                      className="whitespace-nowrap px-4 py-3 font-medium"
+                      className="whitespace-nowrap px-4 py-3 text-left font-medium"
                     >
                       {heading}
                     </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
@@ -315,6 +346,7 @@ export function PaymentsPage() {
                     const balance = Math.max(booking.amount - collected, 0);
                     const status = ledgerStatus(booking);
                     const transactions = booking.transactions ?? [];
+
                     return (
                       <tr
                         key={booking.id}
@@ -328,15 +360,18 @@ export function PaymentsPage() {
                             {booking.customer} · {booking.email}
                           </div>
                         </td>
+
                         <td className="px-4 py-3 text-slate-600">
                           <div>{booking.service}</div>
                           <div className="mt-0.5 text-xs text-slate-500">
                             {booking.date} · {booking.time}
                           </div>
                         </td>
+
                         <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">
                           {money(booking.amount)}
                         </td>
+
                         <td className="whitespace-nowrap px-4 py-3 text-emerald-800">
                           {money(collected)}
                           {(booking.amountRefunded ?? 0) > 0 && (
@@ -345,9 +380,11 @@ export function PaymentsPage() {
                             </div>
                           )}
                         </td>
+
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                           {money(balance)}
                         </td>
+
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -363,77 +400,132 @@ export function PaymentsPage() {
                             {status}
                           </span>
                         </td>
-                        <td className="min-w-48 px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
+
+                        <td className="px-4 py-3">
+                          <div
+                            ref={
+                              openActionId === booking.id
+                                ? actionMenuRef
+                                : undefined
+                            }
+                            className="relative flex justify-start"
+                          >
                             <button
                               type="button"
-                              onClick={() => printInvoice(booking)}
-                              className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              aria-label={`Actions for ${
+                                booking.confirmationCode ?? booking.customer
+                              }`}
+                              aria-expanded={openActionId === booking.id}
+                              onClick={() =>
+                                setOpenActionId((current) =>
+                                  current === booking.id ? null : booking.id,
+                                )
+                              }
+                              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                             >
-                              <FileText size={14} /> Invoice
+                              <MoreVertical size={18} />
                             </button>
-                            {balance > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTransactionBooking(booking);
-                                  setTransactionType("Charge");
-                                }}
-                                className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-800"
-                              >
-                                Record payment
-                              </button>
-                            )}
-                            {collected > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTransactionBooking(booking);
-                                  setTransactionType("Refund");
-                                }}
-                                className="flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50"
-                              >
-                                <RotateCcw size={13} /> Record refund
-                              </button>
+
+                            {openActionId === booking.id && (
+                              <div className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionId(null);
+                                    printInvoice(booking);
+                                  }}
+                                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  <FileText
+                                    size={15}
+                                    className="text-slate-500"
+                                  />
+                                  View invoice
+                                </button>
+
+                                {balance > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionId(null);
+                                      setTransactionBooking(booking);
+                                      setTransactionType("Charge");
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <CircleDollarSign
+                                      size={15}
+                                      className="text-emerald-700"
+                                    />
+                                    Record payment
+                                  </button>
+                                )}
+
+                                {collected > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionId(null);
+                                      setTransactionBooking(booking);
+                                      setTransactionType("Refund");
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <RotateCcw
+                                      size={15}
+                                      className="text-rose-600"
+                                    />
+                                    Issue refund
+                                  </button>
+                                )}
+
+                                <div className="my-1 border-t border-slate-100" />
+
+                                <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5">
+                                  <div className="mb-2 text-xs font-medium text-slate-500">
+                                    Transactions (
+                                    {transactions.length ||
+                                      (booking.payment === "Paid" ? 1 : 0)}
+                                    )
+                                  </div>
+
+                                  {transactions.length ? (
+                                    <div className="space-y-2">
+                                      {transactions.map((transaction) => (
+                                        <div
+                                          key={transaction.reference}
+                                          className="border-l-2 border-slate-300 pl-2 text-xs text-slate-500"
+                                        >
+                                          <div className="font-medium text-slate-700">
+                                            {transaction.type} ·{" "}
+                                            {money(transaction.amount)}
+                                          </div>
+                                          <div>
+                                            {transaction.method} ·{" "}
+                                            {new Date(
+                                              transaction.createdAt,
+                                            ).toLocaleString()}
+                                          </div>
+                                          <div className="break-all">
+                                            {transaction.reference}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : booking.payment === "Paid" ? (
+                                    <div className="border-l-2 border-slate-300 pl-2 text-xs text-slate-500">
+                                      Existing recorded payment ·{" "}
+                                      {money(booking.amount)}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-slate-500">
+                                      No transactions recorded.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
-                          <details className="mt-2 text-xs text-slate-500">
-                            <summary className="cursor-pointer select-none">
-                              Transactions (
-                              {transactions.length ||
-                                (booking.payment === "Paid" ? 1 : 0)}
-                              )
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                              {transactions.length ? (
-                                transactions.map((transaction) => (
-                                  <div
-                                    key={transaction.reference}
-                                    className="border-l-2 border-slate-200 pl-2"
-                                  >
-                                    <div className="font-medium text-slate-700">
-                                      {transaction.type} ·{" "}
-                                      {money(transaction.amount)}
-                                    </div>
-                                    <div>
-                                      {transaction.method} ·{" "}
-                                      {new Date(
-                                        transaction.createdAt,
-                                      ).toLocaleString()}
-                                    </div>
-                                    <div>{transaction.reference}</div>
-                                  </div>
-                                ))
-                              ) : booking.payment === "Paid" ? (
-                                <div className="border-l-2 border-slate-200 pl-2">
-                                  Existing recorded payment ·{" "}
-                                  {money(booking.amount)}
-                                </div>
-                              ) : (
-                                <div>No transactions recorded.</div>
-                              )}
-                            </div>
-                          </details>
                         </td>
                       </tr>
                     );
@@ -452,14 +544,14 @@ export function PaymentsPage() {
             className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
           >
             <h2 className="text-lg font-semibold text-slate-900">
-              {transactionType === "Charge"
-                ? "Record payment"
-                : "Record refund"}
+              {transactionType === "Charge" ? "Record payment" : "Issue refund"}
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               {transactionBooking.customer} ·{" "}
               {transactionBooking.confirmationCode}
             </p>
+
             <label className="mt-5 block text-sm font-medium text-slate-700">
               Amount
               <input
@@ -489,10 +581,12 @@ export function PaymentsPage() {
                 className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5"
               />
             </label>
+
             <label className="mt-4 block text-sm font-medium text-slate-700">
               {transactionType === "Charge"
                 ? "Payment method"
                 : "Refund method"}
+
               <select
                 name="method"
                 defaultValue={transactionBooking.paymentMethod ?? "Cash"}
@@ -510,6 +604,7 @@ export function PaymentsPage() {
                 ))}
               </select>
             </label>
+
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
@@ -518,6 +613,7 @@ export function PaymentsPage() {
               >
                 Cancel
               </button>
+
               <button
                 disabled={busy}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
@@ -526,7 +622,7 @@ export function PaymentsPage() {
                   ? "Saving..."
                   : transactionType === "Charge"
                     ? "Record charge"
-                    : "Record refund"}
+                    : "Confirm refund"}
               </button>
             </div>
           </form>
