@@ -50,8 +50,6 @@ const mondayOf = (date: Date) => {
   );
   return result;
 };
-const hourLabel = (hour: number) =>
-  `${hour % 12 || 12}:00 ${hour >= 12 ? "PM" : "AM"}`;
 const normalize = (raw: Partial<Booking> & { _id?: string }) =>
   ({
     ...raw,
@@ -79,9 +77,15 @@ export function CalendarPage() {
   const today = new Date();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<CalendarService[]>([]);
-  const [view, setView] = useState<"week" | "month">("week");
+  const [view, setView] = useState<"day" | "week" | "month">("week");
   const [anchor, setAnchor] = useState(mondayOf(today));
   const [selectedDate, setSelectedDate] = useState(keyOf(today));
+  const [miniMonth, setMiniMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const [serviceFilter, setServiceFilter] = useState("All services");
+  const [courtFilter, setCourtFilter] = useState("All courts");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
   const [courtCount, setCourtCount] = useState(3);
   const [blocked, setBlocked] = useState<string[]>([]);
   const [hours, setHours] = useState(defaultHours);
@@ -118,15 +122,43 @@ export function CalendarPage() {
       }),
     [anchor],
   );
-  const find = (date: string, court?: string, time?: string) =>
+  const selectedDateObject = new Date(`${selectedDate}T12:00:00`);
+  const calendarDates = view === "day" ? [selectedDateObject] : week;
+  const serviceNames = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...services.map((service) => service.name),
+          ...bookings.map((booking) => booking.service),
+        ]),
+      ].sort((a, b) => a.localeCompare(b)),
+    [bookings, services],
+  );
+  const visibleCourts =
+    courtFilter === "All courts"
+      ? courts
+      : courts.filter((court) => court === courtFilter);
+  const find = (date: string, court?: string) =>
     bookings.filter(
       (item) =>
         item.date === date &&
         (!court ||
           item.court === court ||
           (!item.court && court === "Court 1")) &&
-        (!time || item.time === time),
+        (serviceFilter === "All services" || item.service === serviceFilter) &&
+        (statusFilter === "All statuses" || item.status === statusFilter) &&
+        (courtFilter === "All courts" ||
+          (item.court ?? "Court 1") === courtFilter),
     );
+  const chooseDate = (date: Date) => {
+    setSelectedDate(keyOf(date));
+    setMiniMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setAnchor(
+      view === "month"
+        ? new Date(date.getFullYear(), date.getMonth(), 1)
+        : mondayOf(date),
+    );
+  };
 
   useEffect(() => {
     async function load() {
@@ -187,25 +219,75 @@ export function CalendarPage() {
     setShowForm(true);
   };
   const move = (direction: number) => {
+    if (view === "day") {
+      const next = new Date(selectedDateObject);
+      next.setDate(next.getDate() + direction);
+      chooseDate(next);
+      return;
+    }
+
     const next = new Date(anchor);
 
     if (view === "week") {
       next.setDate(next.getDate() + direction * 7);
       setAnchor(mondayOf(next));
+      const selected = new Date(selectedDateObject);
+      selected.setDate(selected.getDate() + direction * 7);
+      chooseDate(selected);
     } else {
       next.setMonth(next.getMonth() + direction);
       setAnchor(new Date(next.getFullYear(), next.getMonth(), 1));
+      chooseDate(new Date(next.getFullYear(), next.getMonth(), 1));
     }
   };
 
   const todayClick = () => {
-    setSelectedDate(keyOf(today));
+    chooseDate(today);
     setAnchor(
       view === "week"
         ? mondayOf(today)
         : new Date(today.getFullYear(), today.getMonth(), 1),
     );
   };
+  const miniMonthCells = Array.from(
+    {
+      length:
+        Math.ceil(
+          (((new Date(
+            miniMonth.getFullYear(),
+            miniMonth.getMonth(),
+            1,
+          ).getDay() +
+            6) %
+            7) +
+            new Date(
+              miniMonth.getFullYear(),
+              miniMonth.getMonth() + 1,
+              0,
+            ).getDate()) /
+            7,
+        ) * 7,
+    },
+    (_, index) => {
+      const firstDay = new Date(
+        miniMonth.getFullYear(),
+        miniMonth.getMonth(),
+        1,
+      );
+      const day = index - ((firstDay.getDay() + 6) % 7) + 1;
+      const totalDays = new Date(
+        miniMonth.getFullYear(),
+        miniMonth.getMonth() + 1,
+        0,
+      ).getDate();
+      return day > 0 && day <= totalDays
+        ? new Date(miniMonth.getFullYear(), miniMonth.getMonth(), day)
+        : null;
+    },
+  );
+  const selectedDayBookings = find(selectedDate).sort((a, b) =>
+    a.time.localeCompare(b.time),
+  );
   const create = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -226,7 +308,8 @@ export function CalendarPage() {
     }
   };
 
-  const month = view === "month" ? anchor : week[0];
+  const month =
+    view === "month" ? anchor : view === "day" ? selectedDateObject : week[0];
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const total = new Date(
     month.getFullYear(),
@@ -244,9 +327,19 @@ export function CalendarPage() {
     },
   );
   const heading =
-    view === "week"
-      ? `${week[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${week[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-      : month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    view === "day"
+      ? selectedDateObject.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : view === "week"
+        ? `${week[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${week[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+        : month.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          });
 
   return (
     <div className="min-w-0 space-y-5">
@@ -259,7 +352,7 @@ export function CalendarPage() {
             Booking calendar
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Keep every court moving, one hour at a time.
+            Manage court bookings across your week.
           </p>
         </div>
         <button
@@ -267,7 +360,7 @@ export function CalendarPage() {
           onClick={() => openForm()}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
         >
-          <Plus size={17} /> New booking
+          <Plus size={17} /> Quick Book
         </button>
       </header>
       {error && (
@@ -275,332 +368,624 @@ export function CalendarPage() {
           {error}
         </div>
       )}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {loading ? (
-          <SkeletonLoader label="Loading calendar">
-            <div className="space-y-4 p-4 sm:p-5">
-              <div className="flex gap-2">
-                <SkeletonBlock className="h-9 w-24" />
-                <SkeletonBlock className="h-9 w-20" />
-                <SkeletonBlock className="ml-auto h-9 w-40" />
-              </div>
-              <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 7 }, (_, day) => (
-                  <div
-                    key={day}
-                    className="space-y-2 rounded-lg border border-slate-200 p-2"
-                  >
-                    <SkeletonBlock className="h-4 w-1/2" />
-                    <SkeletonBlock className="h-8 w-8 rounded-full" />
-                    <SkeletonBlock className="h-20 w-full" />
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {Array.from({ length: 4 }, (_, court) => (
-                  <SkeletonBlock key={court} className="h-8" />
-                ))}
-              </div>
-            </div>
-          </SkeletonLoader>
-        ) : (
-          <>
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={todayClick}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
-                >
-                  Today
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex rounded-xl bg-slate-100 p-1">
-                  {(["week", "month"] as const).map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        setView(item);
-                        setSelectedDate(keyOf(today));
-                        setAnchor(
-                          item === "week"
-                            ? mondayOf(today)
-                            : new Date(
-                                today.getFullYear(),
-                                today.getMonth(),
-                                1,
-                              ),
-                        );
-                      }}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold capitalize ${view === item ? "bg-white text-emerald-800 shadow-sm" : "text-slate-500"}`}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_310px]">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {loading ? (
+            <SkeletonLoader label="Loading calendar">
+              <div className="space-y-4 p-4 sm:p-5">
+                <div className="flex gap-2">
+                  <SkeletonBlock className="h-9 w-24" />
+                  <SkeletonBlock className="h-9 w-20" />
+                  <SkeletonBlock className="ml-auto h-9 w-40" />
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: 7 }, (_, day) => (
+                    <div
+                      key={day}
+                      className="space-y-2 rounded-lg border border-slate-200 p-2"
                     >
-                      {item}
-                    </button>
+                      <SkeletonBlock className="h-4 w-1/2" />
+                      <SkeletonBlock className="h-8 w-8 rounded-full" />
+                      <SkeletonBlock className="h-20 w-full" />
+                    </div>
                   ))}
                 </div>
-                <div className="flex">
-                  <button
-                    type="button"
-                    aria-label="Previous period"
-                    onClick={() => move(-1)}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next period"
-                    onClick={() => move(1)}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {Array.from({ length: 4 }, (_, court) => (
+                    <SkeletonBlock key={court} className="h-8" />
+                  ))}
                 </div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {heading}
-                </h2>
               </div>
-            </div>
-            {view === "week" ? (
-              <div className="w-full overflow-x-auto">
-                <div className="w-full min-w-[1100px]">
-                  <div
-                    className="grid border-b border-slate-200 bg-slate-50"
-                    style={{
-                      gridTemplateColumns: `72px repeat(${week.length}, minmax(0, 1fr))`,
-                    }}
+            </SkeletonLoader>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={todayClick}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
-                    <div className="row-span-2 font-bold border-r border-slate-200 flex items-center justify-center">
-                      Time
-                    </div>
-
-                    {week.map((date, i) => (
-                      <div
-                        key={keyOf(date)}
-                        className="border-r border-slate-200 text-center"
+                    Today
+                  </button>
+                  <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+                    {(["day", "week", "month"] as const).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => {
+                          setView(item);
+                          const selected = new Date(`${selectedDate}T12:00:00`);
+                          setAnchor(
+                            item === "week"
+                              ? mondayOf(selected)
+                              : new Date(
+                                  selected.getFullYear(),
+                                  selected.getMonth(),
+                                  1,
+                                ),
+                          );
+                        }}
+                        aria-pressed={view === item}
+                        className={`rounded-md px-2.5 py-1.5 text-xs font-semibold capitalize transition sm:px-3 sm:text-sm ${view === item ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                       >
-                        <div className="p-3">
-                          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                            {days[i]}
-                          </div>
-                          <div
-                            className={`mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-900"}`}
-                          >
-                            {date.getDate()}
-                          </div>
-                        </div>
-                        <div
-                          className="grid border-t border-slate-200"
-                          style={{
-                            gridTemplateColumns: `repeat(${courts.length}, minmax(0, 1fr))`,
-                          }}
-                        >
-                          {courts.map((court) => (
-                            <div
-                              key={`${keyOf(date)}-${court}`}
-                              className={`border-r border-slate-200 py-2 text-center text-[10px] font-bold uppercase last:border-r-0 ${blocked.includes(court) ? "text-slate-400" : "text-slate-500"}`}
-                            >
-                              {court.replace("Court ", "C")}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                        {item}
+                      </button>
                     ))}
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+                  <div className="flex shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Previous period"
+                      onClick={() => move(-1)}
+                      className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next period"
+                      onClick={() => move(1)}
+                      className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <h2 className="min-w-0 text-sm font-semibold text-slate-900 sm:text-base">
+                    {heading}
+                  </h2>
+                  {view === "day" && (
+                    <input
+                      type="date"
+                      aria-label="Choose calendar date"
+                      value={selectedDate}
+                      onChange={(event) => {
+                        if (event.target.value)
+                          chooseDate(
+                            new Date(`${event.target.value}T12:00:00`),
+                          );
+                      }}
+                      className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700"
+                    />
+                  )}
+                </div>
+              </div>
+              {view !== "month" ? (
+                <div className="overflow-x-auto">
                   <div
-                    className="grid"
-                    style={{
-                      gridTemplateColumns: `72px repeat(${week.length * courts.length}, minmax(0, 1fr))`,
-                    }}
+                    className={
+                      view === "day" ? "min-w-[420px]" : "min-w-[1040px]"
+                    }
                   >
-                    {hours.map((hour) => (
-                      <div key={hour} className="contents">
-                        <div className="border-r border-b border-slate-100 px-2 py-4 text-right text-[11px] font-semibold text-slate-400">
-                          {hourLabel(hour)}
-                        </div>
-                        {week.flatMap((date) =>
-                          courts.map((court) => {
+                    <div
+                      className="grid border-b border-slate-200 bg-slate-50"
+                      style={{
+                        gridTemplateColumns: `132px repeat(${calendarDates.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      <div className="flex items-center px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Courts
+                      </div>
+                      {calendarDates.map((date) => {
+                        const dateKey = keyOf(date);
+                        const isToday = dateKey === keyOf(today);
+                        const isSelected = dateKey === selectedDate;
+                        return (
+                          <button
+                            type="button"
+                            key={dateKey}
+                            onClick={() => chooseDate(date)}
+                            aria-label={`Select ${date.toLocaleDateString("en-US", { dateStyle: "full" })}`}
+                            className={`border-l border-slate-200 px-3 py-3 text-left transition hover:bg-white ${isSelected ? "bg-emerald-50/70" : ""}`}
+                          >
+                            <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                              {date.toLocaleDateString("en-US", {
+                                weekday: "short",
+                              })}
+                            </span>
+                            <span
+                              className={`mt-1 inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-bold ${isToday ? "bg-emerald-700 text-white" : isSelected ? "bg-emerald-100 text-emerald-900" : "text-slate-900"}`}
+                            >
+                              {date.getDate()}
+                            </span>
+                            <span className="ml-2 text-[10px] text-slate-400">
+                              {find(dateKey).length} bookings
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {visibleCourts.map((court) => {
+                      const unavailable = blocked.includes(court);
+                      const weekCount = calendarDates.reduce(
+                        (totalCount, date) =>
+                          totalCount + find(keyOf(date), court).length,
+                        0,
+                      );
+                      return (
+                        <div
+                          key={court}
+                          className="grid border-b border-slate-200 last:border-b-0"
+                          style={{
+                            gridTemplateColumns: `132px repeat(${calendarDates.length}, minmax(0, 1fr))`,
+                          }}
+                        >
+                          <div className="sticky left-0 z-10 flex min-h-36 flex-col justify-center border-r border-slate-200 bg-white px-4 py-3">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {court}
+                            </span>
+                            <span
+                              className={`mt-1 text-xs ${unavailable ? "text-slate-400" : "text-slate-500"}`}
+                            >
+                              {unavailable
+                                ? "Unavailable"
+                                : `${weekCount} bookings`}
+                            </span>
+                          </div>
+                          {calendarDates.map((date) => {
                             const dateKey = keyOf(date);
-                            const booking = find(
-                              dateKey,
-                              court,
-                              `${String(hour).padStart(2, "0")}:00`,
-                            )[0];
-                            const service = services.find(
-                              (item) => item.name === booking?.service,
+                            const cellBookings = find(dateKey, court).sort(
+                              (firstBooking, secondBooking) =>
+                                firstBooking.time.localeCompare(
+                                  secondBooking.time,
+                                ),
                             );
-                            const ServiceIcon = serviceIconFor(service?.icon);
-                            const serviceColor = service?.color ?? "#059669";
-                            const unavailable = blocked.includes(court);
                             return (
                               <div
-                                key={`${dateKey}-${court}-${hour}`}
-                                className={`min-h-[60px] border-r border-b border-slate-100 p-1 ${unavailable ? "bg-slate-50" : "hover:bg-emerald-50/40"}`}
+                                key={`${court}-${dateKey}`}
+                                className={`min-h-36 space-y-2 border-l border-slate-200 p-2 ${dateKey === selectedDate ? "bg-emerald-50/30" : "bg-white"} ${unavailable ? "bg-slate-50" : ""}`}
                               >
                                 {unavailable ? (
-                                  <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase text-slate-300">
-                                    Blocked
+                                  <div className="flex min-h-28 items-center justify-center text-xs font-medium text-slate-400">
+                                    Court closed
                                   </div>
-                                ) : booking ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setDetail(booking)}
-                                    className={`h-full w-full rounded-lg border border-l-[3px] p-2 text-left text-[11px] ${bookingTone(booking.status)}`}
-                                    style={{ borderLeftColor: serviceColor }}
-                                  >
-                                    <strong className="block truncate">
-                                      {booking.customer}
-                                    </strong>
-                                    <span className="flex min-w-0 items-center gap-1 truncate opacity-80">
-                                      <ServiceIcon
-                                        size={12}
-                                        className="shrink-0"
-                                        style={{ color: serviceColor }}
-                                      />
-                                      <span className="truncate">
-                                        {booking.service}
-                                      </span>
-                                    </span>
-                                  </button>
                                 ) : (
-                                  <button
-                                    type="button"
-                                    aria-label={`New booking ${dateKey} ${hourLabel(hour)} ${court}`}
-                                    onClick={() =>
-                                      openForm(
-                                        dateKey,
-                                        `${String(hour).padStart(2, "0")}:00`,
-                                        court,
-                                      )
-                                    }
-                                    className="h-full min-h-[52px] w-full rounded-lg"
-                                  />
+                                  <>
+                                    {cellBookings.map((booking) => {
+                                      const service = services.find(
+                                        (item) => item.name === booking.service,
+                                      );
+                                      const ServiceIcon = serviceIconFor(
+                                        service?.icon,
+                                      );
+                                      const serviceColor =
+                                        service?.color ?? "#059669";
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={booking.id}
+                                          onClick={() => setDetail(booking)}
+                                          className="block w-full rounded-lg border border-slate-200 border-l-[3px] bg-white p-2.5 text-left shadow-sm transition hover:border-slate-300 hover:shadow"
+                                          style={{
+                                            borderLeftColor: serviceColor,
+                                          }}
+                                        >
+                                          <span className="flex items-center justify-between gap-1">
+                                            <span className="flex items-center gap-1 text-[11px] font-semibold tabular-nums text-slate-500">
+                                              <Clock3 size={12} />{" "}
+                                              {booking.time}
+                                            </span>
+                                            <span
+                                              className={`truncate rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${bookingTone(booking.status)}`}
+                                            >
+                                              {booking.status}
+                                            </span>
+                                          </span>
+                                          <strong className="mt-1.5 block truncate text-xs font-semibold text-slate-900">
+                                            {booking.customer}
+                                          </strong>
+                                          <span
+                                            className="mt-1 flex min-w-0 items-center gap-1 truncate text-[11px] font-medium"
+                                            style={{ color: serviceColor }}
+                                          >
+                                            <ServiceIcon
+                                              size={12}
+                                              className="shrink-0"
+                                            />
+                                            <span className="truncate">
+                                              {booking.service}
+                                            </span>
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                    <button
+                                      type="button"
+                                      aria-label={`Quick book ${court} on ${dateKey}`}
+                                      onClick={() =>
+                                        openForm(
+                                          dateKey,
+                                          `${String(hours[0] ?? 9).padStart(2, "0")}:00`,
+                                          court,
+                                        )
+                                      }
+                                      className="flex min-h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-slate-200 text-[11px] font-medium text-slate-400 transition hover:border-emerald-300 hover:bg-white hover:text-emerald-700"
+                                    >
+                                      <Plus size={13} /> Add booking
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             );
-                          }),
-                        )}
+                          })}
+                        </div>
+                      );
+                    })}
+                    {visibleCourts.length === 0 && (
+                      <div className="p-10 text-center text-sm text-slate-500">
+                        No courts match this filter.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-4 sm:p-5">
-                <div className="grid grid-cols-7 border-l border-t border-slate-200">
-                  {days.map((day) => (
-                    <div
-                      key={day}
-                      className="border-r border-b border-slate-200 bg-slate-50 py-2 text-center text-[11px] font-bold uppercase text-slate-500"
-                    >
-                      {day}
-                    </div>
-                  ))}
-                  {cells.map((date, i) =>
-                    !date ? (
+              ) : (
+                <div className="p-4 sm:p-5">
+                  <div className="grid grid-cols-7 border-l border-t border-slate-200">
+                    {days.map((day) => (
                       <div
-                        key={`blank-${i}`}
-                        className="min-h-24 border-r border-b border-slate-200 bg-slate-50/50"
-                      />
-                    ) : (
+                        key={day}
+                        className="border-r border-b border-slate-200 bg-slate-50 py-2 text-center text-[11px] font-bold uppercase text-slate-500"
+                      >
+                        {day}
+                      </div>
+                    ))}
+                    {cells.map((date, i) =>
+                      !date ? (
+                        <div
+                          key={`blank-${i}`}
+                          className="min-h-24 border-r border-b border-slate-200 bg-slate-50/50"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          key={keyOf(date)}
+                          onClick={() => chooseDate(date)}
+                          className={`min-h-24 border-r border-b border-slate-200 p-2 text-left ${selectedDate === keyOf(date) ? "bg-emerald-50 ring-2 ring-inset ring-emerald-600" : "bg-white"}`}
+                        >
+                          <span
+                            className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-700"}`}
+                          >
+                            {date.getDate()}
+                          </span>
+                          <div className="mt-2 flex gap-1">
+                            {find(keyOf(date))
+                              .slice(0, 5)
+                              .map((booking) => {
+                                const service = services.find(
+                                  (item) => item.name === booking.service,
+                                );
+                                const ServiceIcon = serviceIconFor(
+                                  service?.icon,
+                                );
+                                return (
+                                  <span
+                                    key={booking.id}
+                                    title={booking.service}
+                                  >
+                                    <ServiceIcon
+                                      size={13}
+                                      style={{
+                                        color: service?.color ?? "#059669",
+                                      }}
+                                    />
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        </button>
+                      ),
+                    )}
+                  </div>
+                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                          Selected date
+                        </p>
+                        <h3 className="mt-1 font-bold text-slate-900">
+                          {new Date(
+                            `${selectedDate}T12:00:00`,
+                          ).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </h3>
+                      </div>
                       <button
                         type="button"
-                        key={keyOf(date)}
-                        onClick={() => setSelectedDate(keyOf(date))}
-                        className={`min-h-24 border-r border-b border-slate-200 p-2 text-left ${selectedDate === keyOf(date) ? "bg-emerald-50 ring-2 ring-inset ring-emerald-600" : "bg-white"}`}
+                        onClick={() => openForm(selectedDate)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white"
                       >
-                        <span
-                          className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${keyOf(date) === keyOf(today) ? "bg-emerald-700 text-white" : "text-slate-700"}`}
-                        >
-                          {date.getDate()}
-                        </span>
-                        <div className="mt-2 flex gap-1">
-                          {find(keyOf(date))
-                            .slice(0, 5)
-                            .map((booking) => {
-                              const service = services.find(
-                                (item) => item.name === booking.service,
-                              );
-                              const ServiceIcon = serviceIconFor(service?.icon);
-                              return (
-                                <span key={booking.id} title={booking.service}>
-                                  <ServiceIcon
-                                    size={13}
-                                    style={{ color: service?.color ?? "#059669" }}
-                                  />
-                                </span>
-                              );
-                            })}
-                        </div>
+                        <Plus size={14} /> Add booking
                       </button>
-                    ),
-                  )}
-                </div>
-                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                        Selected date
-                      </p>
-                      <h3 className="mt-1 font-bold text-slate-900">
-                        {new Date(
-                          `${selectedDate}T12:00:00`,
-                        ).toLocaleDateString("en-US", {
-                          weekday: "long",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </h3>
                     </div>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {courts.map((court) => (
+                        <div
+                          key={court}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                        >
+                          <div className="flex justify-between text-sm font-semibold text-slate-700">
+                            <span>{court}</span>
+                            <span
+                              className={`text-xs ${blocked.includes(court) ? "text-slate-400" : "text-emerald-700"}`}
+                            >
+                              {blocked.includes(court)
+                                ? "Unavailable"
+                                : `${find(selectedDate, court).length} booked`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-4 border-t border-slate-100 px-4 py-3 text-xs font-semibold text-slate-500">
+                <span>
+                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  Available
+                </span>
+                <span>
+                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  Pending
+                </span>
+                <span>
+                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-slate-300" />
+                  Unavailable
+                </span>
+              </div>
+            </>
+          )}
+        </section>
+        <aside className="space-y-4 2xl:sticky 2xl:top-24">
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-900">
+                {miniMonth.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </h2>
+              <div className="flex">
+                <button
+                  type="button"
+                  aria-label="Previous month in mini calendar"
+                  onClick={() =>
+                    setMiniMonth(
+                      (current) =>
+                        new Date(
+                          current.getFullYear(),
+                          current.getMonth() - 1,
+                          1,
+                        ),
+                    )
+                  }
+                  className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next month in mini calendar"
+                  onClick={() =>
+                    setMiniMonth(
+                      (current) =>
+                        new Date(
+                          current.getFullYear(),
+                          current.getMonth() + 1,
+                          1,
+                        ),
+                    )
+                  }
+                  className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-y-1 text-center">
+              {days.map((day) => (
+                <span
+                  key={day}
+                  className="py-1 text-[10px] font-semibold uppercase text-slate-400"
+                >
+                  {day.slice(0, 2)}
+                </span>
+              ))}
+              {miniMonthCells.map((date, index) =>
+                date ? (
+                  <button
+                    key={keyOf(date)}
+                    type="button"
+                    onClick={() => chooseDate(date)}
+                    aria-label={date.toLocaleDateString("en-US", {
+                      dateStyle: "full",
+                    })}
+                    className={`mx-auto flex h-8 w-8 flex-col items-center justify-center rounded-full text-xs transition ${keyOf(date) === keyOf(today) ? "bg-emerald-700 font-bold text-white" : keyOf(date) === selectedDate ? "bg-emerald-100 font-bold text-emerald-900 ring-1 ring-emerald-600" : "text-slate-700 hover:bg-slate-100"}`}
+                  >
+                    {date.getDate()}
+                  </button>
+                ) : (
+                  <span key={`mini-blank-${index}`} className="h-8" />
+                ),
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">
+              Filters
+            </h2>
+            <div className="space-y-3">
+              <label className="block text-xs font-medium text-slate-600">
+                Service
+                <select
+                  value={serviceFilter}
+                  onChange={(event) => setServiceFilter(event.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600"
+                >
+                  <option>All services</option>
+                  {serviceNames.map((name) => (
+                    <option key={name}>{name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                Court
+                <select
+                  value={courtFilter}
+                  onChange={(event) => setCourtFilter(event.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600"
+                >
+                  <option>All courts</option>
+                  {courts.map((court) => (
+                    <option key={court}>{court}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                Status
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600"
+                >
+                  <option>All statuses</option>
+                  <option>Confirmed</option>
+                  <option>Pending</option>
+                  <option>Completed</option>
+                  <option>Rejected</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="border-b border-slate-100 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                Selected day
+              </p>
+              <h2 className="mt-1 text-sm font-semibold text-slate-900">
+                {selectedDateObject.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </h2>
+            </div>
+            <div className="max-h-72 divide-y divide-slate-100 overflow-y-auto">
+              {selectedDayBookings.length ? (
+                selectedDayBookings.map((booking) => {
+                  const service = services.find(
+                    (item) => item.name === booking.service,
+                  );
+                  const ServiceIcon = serviceIconFor(service?.icon);
+                  const serviceColor = service?.color ?? "#059669";
+                  return (
                     <button
                       type="button"
-                      onClick={() => openForm(selectedDate)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white"
+                      key={booking.id}
+                      onClick={() => setDetail(booking)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
                     >
-                      <Plus size={14} /> Add booking
-                    </button>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {courts.map((court) => (
-                      <div
-                        key={court}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                      <span className="w-12 shrink-0 pt-0.5 text-xs font-semibold tabular-nums text-slate-500">
+                        {booking.time}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold text-slate-900">
+                          {booking.customer}
+                        </span>
+                        <span
+                          className="mt-1 flex items-center gap-1 truncate text-[11px]"
+                          style={{ color: serviceColor }}
+                        >
+                          <ServiceIcon size={12} />
+                          {booking.service}
+                        </span>
+                        <span className="mt-1 block text-[10px] text-slate-400">
+                          {booking.court ?? "Court 1"}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${bookingTone(booking.status)}`}
                       >
-                        <div className="flex justify-between text-sm font-semibold text-slate-700">
-                          <span>{court}</span>
-                          <span
-                            className={`text-xs ${blocked.includes(court) ? "text-slate-400" : "text-emerald-700"}`}
-                          >
-                            {blocked.includes(court)
-                              ? "Unavailable"
-                              : `${find(selectedDate, court).length} booked`}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-4 border-t border-slate-100 px-4 py-3 text-xs font-semibold text-slate-500">
-              <span>
-                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                Available
-              </span>
-              <span>
-                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
-                Pending
-              </span>
-              <span>
-                <i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-slate-300" />
-                Unavailable
-              </span>
+                        {booking.status}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="px-4 py-6 text-center text-xs text-slate-500">
+                  No bookings match these filters.
+                </p>
+              )}
             </div>
-          </>
-        )}
-      </section>
+            <div className="border-t border-slate-100 px-4 py-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Court availability
+              </p>
+              <div className="space-y-1.5">
+                {courts.map((court) => {
+                  const isUnavailable = blocked.includes(court);
+                  const bookingCount = bookings.filter(
+                    (booking) =>
+                      booking.date === selectedDate &&
+                      (booking.court ?? "Court 1") === court &&
+                      booking.status !== "Rejected",
+                  ).length;
+                  return (
+                    <div
+                      key={court}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-slate-600">{court}</span>
+                      <span
+                        className={
+                          isUnavailable
+                            ? "text-slate-400"
+                            : bookingCount
+                              ? "text-amber-700"
+                              : "text-emerald-700"
+                        }
+                      >
+                        {isUnavailable
+                          ? "Unavailable"
+                          : bookingCount
+                            ? `${bookingCount} booked`
+                            : "Available"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
       {detail && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
