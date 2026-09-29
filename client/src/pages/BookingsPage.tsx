@@ -413,7 +413,7 @@ export function BookingsPage() {
               <input
                 name="staff"
                 required
-                defaultValue={editingBooking?.staff ?? "Maria"}
+                defaultValue={editingBooking?.staff ?? "Admin"}
                 placeholder="Staff member"
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />

@@ -40,6 +40,7 @@ import {
   notificationEvent,
   type BookingNotification,
 } from "../lib/notifications";
+import logodark from "../assets/logodark.png";
 
 const businessNav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -232,7 +233,8 @@ export function Layout({ children }: { children: ReactNode }) {
         >
           {!isCollapsed && (
             <div>
-              <div className="mt-1 text-lg font-semibold">{businessName}</div>
+              {/* <div className="mt-1 text-lg font-semibold">{businessName}</div> */}
+              <img src={logodark} className="h-7" />
             </div>
           )}
 
@@ -375,7 +377,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 className="h-9 w-9 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
                 {profile.name.slice(0, 1) || "A"}
               </div>
             )}
@@ -464,7 +466,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     `sidebar-item flex items-center gap-3 rounded-xl px-3 py-2 ${isActive ? "active" : ""}`
                   }
                 >
-                  <Settings size={16} className="shrink-0" />
+                  <Settings size={16} className="shrink-0 " />
                   <span className="leading-none">Settings</span>
                 </NavLink>
               )}
@@ -476,7 +478,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 setShowMobileMenu(false);
                 setShowUserMenu(true);
               }}
-              className="mt-4 flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-left"
+              className="mt-4 flex w-full items-center gap-3 rounded-xl border  border-slate-200 bg-emerald-700 p-3 text-left"
               aria-label="Open user menu"
             >
               {profile.photo ? (
@@ -486,7 +488,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   className="h-9 w-9 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
                   {profile.name.slice(0, 1) || "A"}
                 </span>
               )}
@@ -781,7 +783,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         className="h-16 w-16 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-semibold text-white">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-700 text-xl font-semibold text-white">
                         {profile.name.slice(0, 1) || "A"}
                       </div>
                     )}
@@ -994,7 +996,7 @@ export function Layout({ children }: { children: ReactNode }) {
               {!isStaff && (
                 <button
                   onClick={() => navigate("/settings")}
-                  className="hidden shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:block"
+                  className="hidden shrink-0 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-800 sm:block"
                 >
                   <Settings size={18} />
                 </button>

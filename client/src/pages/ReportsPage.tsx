@@ -171,7 +171,7 @@ export function ReportsPage() {
               type="button"
               onClick={() => setPeriod(days)}
               aria-pressed={period === days}
-              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${period === days ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold ${period === days ? "bg-emerald-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
             >
               {days} days
             </button>

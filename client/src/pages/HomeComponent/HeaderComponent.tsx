@@ -33,6 +33,14 @@ function HeaderComponent() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <div>
+              <Link
+                to="/login"
+                className="text-sm font-bold uppercase tracking-[0.14em] text-emerald-50 transition hover:text-lime-300"
+              >
+                Login
+              </Link>
+            </div>
             <Link
               to="/book/westmont"
               className="rounded-full bg-lime-300 px-4 py-2.5 text-sm font-black text-slate-950 shadow-sm transition hover:bg-lime-200"
