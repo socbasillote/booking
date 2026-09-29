@@ -403,7 +403,7 @@ export function PaymentsPage() {
             onChange={(event) =>
               setStatusFilter(event.target.value as "" | LedgerStatus)
             }
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm sm:w-auto"
           >
             <option value="">All payment statuses</option>
             <option value="Unpaid">Unpaid</option>
@@ -422,8 +422,8 @@ export function PaymentsPage() {
             </div>
           </SkeletonLoader>
         ) : (
-          <div className="table-shell">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table className="w-full min-w-190 text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   {[
@@ -542,7 +542,7 @@ export function PaymentsPage() {
                             </button>
 
                             {openActionId === booking.id && (
-                              <div className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                              <div className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -661,13 +661,13 @@ export function PaymentsPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 p-4">
           <form
             onSubmit={submitTransaction}
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-xl sm:p-6"
           >
             <h2 className="text-lg font-semibold text-slate-900">
               {transactionType === "Charge" ? "Record payment" : "Issue refund"}
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 wrap-break-word text-sm text-slate-500">
               {transactionBooking.customer} ·{" "}
               {transactionBooking.confirmationCode}
             </p>

@@ -131,6 +131,7 @@ function getLocalProfile(
 
 export function Layout({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [userSettingsTab, setUserSettingsTab] = useState<
@@ -185,6 +186,15 @@ export function Layout({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [showUserSettings]);
+
+  useEffect(() => {
+    if (!showMobileMenu) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowMobileMenu(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [showMobileMenu]);
 
   useEffect(() => {
     const refreshNotifications = () => setNotifications(getNotifications());
@@ -385,9 +395,117 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      {showMobileMenu && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/40 lg:hidden"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowMobileMenu(false);
+          }}
+        >
+          <aside
+            id="mobile-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            className="flex h-full w-[min(18rem,85vw)] flex-col border-r border-slate-200 bg-white p-4 shadow-xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-lg font-semibold text-slate-900">
+                {businessName}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMobileMenu(false)}
+                className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto text-sm">
+              {[
+                { label: "Business", items: businessNav },
+                { label: "Operations", items: operationsNav },
+                { label: "Growth", items: growthNav },
+              ].map(({ label, items }) => (
+                <div key={label}>
+                  <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    {label}
+                  </div>
+                  <div className="space-y-1">
+                    {items
+                      .filter(
+                        ({ label: itemLabel }) =>
+                          !(isStaff && restrictedForStaff.has(itemLabel)),
+                      )
+                      .map(({ label: itemLabel, to, icon: Icon }) => (
+                        <NavLink
+                          key={itemLabel}
+                          to={to}
+                          onClick={() => setShowMobileMenu(false)}
+                          className={({ isActive }) =>
+                            `sidebar-item flex items-center gap-3 rounded-xl px-3 py-2 ${isActive ? "active" : ""}`
+                          }
+                        >
+                          <Icon size={16} className="shrink-0" />
+                          <span className="leading-none">{itemLabel}</span>
+                        </NavLink>
+                      ))}
+                  </div>
+                </div>
+              ))}
+              {!isStaff && (
+                <NavLink
+                  to="/settings"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={({ isActive }) =>
+                    `sidebar-item flex items-center gap-3 rounded-xl px-3 py-2 ${isActive ? "active" : ""}`
+                  }
+                >
+                  <Settings size={16} className="shrink-0" />
+                  <span className="leading-none">Settings</span>
+                </NavLink>
+              )}
+            </nav>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileMenu(false);
+                setShowUserMenu(true);
+              }}
+              className="mt-4 flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-left"
+              aria-label="Open user menu"
+            >
+              {profile.photo ? (
+                <img
+                  src={profile.photo}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                  {profile.name.slice(0, 1) || "A"}
+                </span>
+              )}
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-slate-900">
+                  {profile.name}
+                </span>
+                <span className="block text-xs capitalize text-slate-500">
+                  {user?.role ?? "owner"}
+                </span>
+              </span>
+            </button>
+          </aside>
+        </div>
+      )}
+
       {showUserMenu && (
         <div
-          className="fixed inset-0 z-[60]"
+          className="fixed inset-0 z-60"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setShowUserMenu(false);
@@ -398,7 +516,7 @@ export function Layout({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="User navigation"
-            className="absolute bottom-[88px] left-4 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="absolute bottom-4 left-4 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:bottom-22 lg:w-80"
             onMouseDown={(event) => event.stopPropagation()}
           >
             {/* User header */}
@@ -789,8 +907,12 @@ export function Layout({ children }: { children: ReactNode }) {
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {/* Mobile menu */}
               <button
+                type="button"
+                onClick={() => setShowMobileMenu(true)}
                 className="shrink-0 rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
                 aria-label="Open menu"
+                aria-expanded={showMobileMenu}
+                aria-controls="mobile-navigation"
               >
                 <Menu size={18} />
               </button>
